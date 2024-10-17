@@ -1,68 +1,73 @@
 #include "led.h"
-#include <led_strip.h>
 #include <esp_log.h>
+#include <led_strip.h>
 
-static const char* TAG = "led";
+static const char *TAG = "led";
 static led_strip_handle_t s_led_strip;
 
-typedef struct
-{
+typedef struct {
   uint8_t red;
   uint8_t green;
   uint8_t blue;
 } RgbColor;
 
 static const RgbColor COLORS[] = {
-    {   // RED
+    {
+        // RED
         .red = 255,
         .green = 0,
         .blue = 0,
     },
-    {   // GREEN
+    {
+        // GREEN
         .red = 0,
         .green = 255,
         .blue = 0,
     },
-    {   // BLUE
+    {
+        // BLUE
         .red = 0,
         .green = 0,
         .blue = 255,
     },
-    {   // YELLOW
+    {
+        // YELLOW
         .red = 255,
         .green = 255,
         .blue = 0,
     },
-    {   // LIGHT_BLUE
+    {
+        // LIGHT_BLUE
         .red = 0,
         .green = 255,
         .blue = 255,
     },
-    {   // MAGENTA
+    {
+        // MAGENTA
         .red = 255,
         .green = 0,
         .blue = 255,
     },
-    {   // WHITE
+    {
+        // WHITE
         .red = 255,
         .green = 255,
         .blue = 255,
     },
 };
 
-void led_set(Color color, uint16_t intensity)
-{
-  if (color >= NB_COLORS)
-  {
+void led_set(Color color, uint16_t intensity) {
+  if (color >= NB_COLORS) {
     ESP_LOGE(TAG, "Invalid color %d", color);
     return;
   }
 
   intensity = intensity > 100 ? 100 : intensity;
 
-  const RgbColor * new_color = &COLORS[color];
+  const RgbColor *new_color = &COLORS[color];
 
-  ESP_ERROR_CHECK(led_strip_set_pixel(s_led_strip, 0, new_color->red * intensity / 100, new_color->green * intensity / 100, new_color->blue * intensity / 100));
+  ESP_ERROR_CHECK(led_strip_set_pixel(s_led_strip, 0, new_color->red * intensity / 100,
+                                      new_color->green * intensity / 100, new_color->blue * intensity / 100));
   ESP_ERROR_CHECK(led_strip_refresh(s_led_strip));
   ESP_LOGI(TAG, "Set LED color to %d/%d/%d i=%d", new_color->red, new_color->green, new_color->blue, intensity);
 }

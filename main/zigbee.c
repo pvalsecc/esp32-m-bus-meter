@@ -1,9 +1,9 @@
 #include "zigbee.h"
 #include "led.h"
+#include <esp_check.h>
 #include <esp_zigbee_core.h>
 #include <ha/esp_zigbee_ha_standard.h>
 #include <zb_config_platform.h>
-#include <esp_check.h>
 
 static const char *TAG = "zigbee";
 
@@ -17,20 +17,18 @@ static const char *TAG = "zigbee";
   ESP_ZB_TRANSCEIVER_ALL_CHANNELS_MASK /* Zigbee primary channel mask use in                                           \
                                           the example */
 
-static esp_err_t deferred_driver_init(void)
-{
+static esp_err_t deferred_driver_init(void) {
   led_set(BLUE, DEFAULT_LED_INTENSITY);
   return ESP_OK;
 }
 
-static void bdb_start_top_level_commissioning_cb(uint8_t mode_mask)
-{
-  ESP_RETURN_ON_FALSE(esp_zb_bdb_start_top_level_commissioning(mode_mask) == ESP_OK, , TAG, "Failed to start Zigbee commissioning");
+static void bdb_start_top_level_commissioning_cb(uint8_t mode_mask) {
+  ESP_RETURN_ON_FALSE(esp_zb_bdb_start_top_level_commissioning(mode_mask) == ESP_OK, , TAG,
+                      "Failed to start Zigbee commissioning");
 }
 
-void esp_zb_app_signal_handler(esp_zb_app_signal_t *signal_struct)
-{
-  uint32_t *p_sg_p       = signal_struct->p_app_signal;
+void esp_zb_app_signal_handler(esp_zb_app_signal_t *signal_struct) {
+  uint32_t *p_sg_p = signal_struct->p_app_signal;
   esp_err_t err_status = signal_struct->esp_err_status;
   esp_zb_app_signal_type_t sig_type = *p_sg_p;
   switch (sig_type) {
@@ -58,14 +56,17 @@ void esp_zb_app_signal_handler(esp_zb_app_signal_t *signal_struct)
     if (err_status == ESP_OK) {
       esp_zb_ieee_addr_t extended_pan_id;
       esp_zb_get_extended_pan_id(extended_pan_id);
-      ESP_LOGI(TAG, "Joined network successfully (Extended PAN ID: %02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x, PAN ID: 0x%04hx, Channel:%d, Short Address: 0x%04hx)",
-               extended_pan_id[7], extended_pan_id[6], extended_pan_id[5], extended_pan_id[4],
-               extended_pan_id[3], extended_pan_id[2], extended_pan_id[1], extended_pan_id[0],
-               esp_zb_get_pan_id(), esp_zb_get_current_channel(), esp_zb_get_short_address());
+      ESP_LOGI(TAG,
+               "Joined network successfully (Extended PAN ID: %02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x, PAN ID: "
+               "0x%04hx, Channel:%d, Short Address: 0x%04hx)",
+               extended_pan_id[7], extended_pan_id[6], extended_pan_id[5], extended_pan_id[4], extended_pan_id[3],
+               extended_pan_id[2], extended_pan_id[1], extended_pan_id[0], esp_zb_get_pan_id(),
+               esp_zb_get_current_channel(), esp_zb_get_short_address());
       led_set(GREEN, DEFAULT_LED_INTENSITY);
     } else {
       ESP_LOGI(TAG, "Network steering was not successful (status: %s)", esp_err_to_name(err_status));
-      esp_zb_scheduler_alarm((esp_zb_callback_t)bdb_start_top_level_commissioning_cb, ESP_ZB_BDB_MODE_NETWORK_STEERING, 1000);
+      esp_zb_scheduler_alarm((esp_zb_callback_t)bdb_start_top_level_commissioning_cb, ESP_ZB_BDB_MODE_NETWORK_STEERING,
+                             1000);
     }
     break;
   default:
@@ -92,7 +93,7 @@ static esp_err_t zigbee_attribute_handler(const esp_zb_zcl_set_attr_value_messag
           message->attribute.data.type == ESP_ZB_ZCL_ATTR_TYPE_BOOL) {
         light_state = message->attribute.data.value ? *(bool *)message->attribute.data.value : light_state;
         ESP_LOGI(TAG, "Light sets to %s", light_state ? "On" : "Off");
-        led_set(light_state?WHITE:GREEN, light_state?100:DEFAULT_LED_INTENSITY);
+        led_set(light_state ? WHITE : GREEN, light_state ? 100 : DEFAULT_LED_INTENSITY);
       }
     }
   }
