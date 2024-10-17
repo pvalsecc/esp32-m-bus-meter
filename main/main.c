@@ -10,12 +10,12 @@ static ButtonState buttonState;
 static void app_long_press(void *arg) { zigbee_reset_pairing(); }
 
 void app_main(void) {
-  ESP_ERROR_CHECK(nvs_flash_init());
+    ESP_ERROR_CHECK(nvs_flash_init());
 
-  led_init();
+    led_init();
 
-  zigbee_init();
+    zigbee_init();
 
-  button_init();
-  button_add(&buttonState, GPIO_NUM_9, NULL, app_long_press, NULL);
+    button_init();
+    button_add(&buttonState, GPIO_NUM_9, NULL, app_long_press, NULL);
 }

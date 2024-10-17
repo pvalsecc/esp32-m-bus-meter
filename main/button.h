@@ -7,10 +7,10 @@
 typedef void (*ButtonCb)(void *);
 
 typedef struct {
-  int64_t pressedTimeUs;
-  ButtonCb shortCb;
-  ButtonCb longCb;
-  void *arg;
+    int64_t pressedTimeUs;
+    ButtonCb shortCb;
+    ButtonCb longCb;
+    void *arg;
 } ButtonState;
 
 void button_init();
