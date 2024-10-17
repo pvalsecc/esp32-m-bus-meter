@@ -156,5 +156,7 @@ void zigbee_init(void) {
 void zigbee_reset_pairing(void) {
     ESP_LOGI(TAG, "Reset network pairing");
     led_set(CONNECTING_COLOR, DEFAULT_LED_INTENSITY);
+    esp_zb_lock_acquire(portMAX_DELAY);
     esp_zb_bdb_reset_via_local_action();
+    esp_zb_lock_release();
 }

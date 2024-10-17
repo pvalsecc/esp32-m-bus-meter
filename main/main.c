@@ -12,12 +12,9 @@ static void long_press(void *arg, void *usr_data) { zigbee_reset_pairing(); }
 static void setup_button() {
     button_config_t gpio_btn_cfg = {
         .type = BUTTON_TYPE_GPIO,
-        .long_press_time = CONFIG_BUTTON_LONG_PRESS_TIME_MS,
-        .short_press_time = CONFIG_BUTTON_SHORT_PRESS_TIME_MS,
         .gpio_button_config =
             {
                 .gpio_num = GPIO_NUM_9,
-                .active_level = 0,
             },
     };
     button_handle_t gpio_btn = iot_button_create(&gpio_btn_cfg);
