@@ -1,2 +1,2 @@
-idf_component_register(SRCS "m-bus-meter.c"
+idf_component_register(SRCS main.c led.c zigbee.c
                     INCLUDE_DIRS ".")
