@@ -69,6 +69,10 @@ void esp_zb_app_signal_handler(esp_zb_app_signal_t *signal_struct) {
                              1000);
     }
     break;
+  case ESP_ZB_ZDO_SIGNAL_LEAVE:
+    ESP_LOGI(TAG, "Re-start network steering");
+    esp_zb_bdb_start_top_level_commissioning(ESP_ZB_BDB_MODE_NETWORK_STEERING);
+    break;
   default:
     ESP_LOGI(TAG, "ZDO signal: %s (0x%x), status: %s", esp_zb_zdo_signal_to_string(sig_type), sig_type,
              esp_err_to_name(err_status));
@@ -147,4 +151,9 @@ void zigbee_init(void) {
   };
   ESP_ERROR_CHECK(esp_zb_platform_config(&config));
   xTaskCreate(zigbee_task, "Zigbee_main", 4096, NULL, 5, NULL);
+}
+
+void zigbee_reset_pairing(void) {
+  ESP_LOGI(TAG, "Reset network pairing");
+  esp_zb_bdb_reset_via_local_action();
 }
