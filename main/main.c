@@ -1,5 +1,6 @@
 #include "iot_button.h"
 #include "led.h"
+#include "uart.h"
 #include "zigbee.h"
 #include <esp_log.h>
 #include <hal/efuse_hal.h>
@@ -33,6 +34,8 @@ void app_main(void) {
     led_init();
 
     zigbee_init();
+
+    uart_init();
 
     setup_button();
 }
