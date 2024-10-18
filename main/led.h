@@ -21,7 +21,7 @@ typedef struct {
 #define CONNECTING_COLOR BLUE
 #define CONNECTED_COLOR GREEN
 
-#define DEFAULT_LED_INTENSITY 10
+#define DEFAULT_LED_INTENSITY 5
 
 void led_init(void);
 void led_set(RgbColor color, uint16_t intensity);

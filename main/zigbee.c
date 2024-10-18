@@ -3,6 +3,7 @@
 #include <esp_check.h>
 #include <esp_zigbee_core.h>
 #include <ha/esp_zigbee_ha_standard.h>
+#include <hal/ieee802154_ll.h>
 #include <zb_config_platform.h>
 
 static const char *TAG = "zigbee";
@@ -134,6 +135,9 @@ static void zigbee_task(void *pvParameters) {
     esp_zb_device_register(esp_zb_on_off_light_ep);
     esp_zb_core_action_handler_register(zigbee_action_handler);
     esp_zb_set_primary_network_channel_set(ESP_ZB_PRIMARY_CHANNEL_MASK);
+    int8_t power;
+    esp_zb_get_tx_power(&power);
+    ESP_LOGI(TAG, "tx_power=%d/%d", power, IEEE802154_TXPOWER_VALUE_MAX);
     ESP_ERROR_CHECK(esp_zb_start(false));
     esp_zb_stack_main_loop();
 }
