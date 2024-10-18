@@ -2,7 +2,20 @@
 
 #include <inttypes.h>
 
-typedef enum { RED, GREEN, BLUE, YELLOW, LIGHT_BLUE, MAGENTA, WHITE, NB_COLORS } Color;
+typedef struct {
+    uint8_t red;
+    uint8_t green;
+    uint8_t blue;
+} RgbColor;
+
+#define RGB(R, G, B) ((RgbColor){.red = (R), .green = (G), .blue = (B)})
+#define RED RGB(255, 0, 0)
+#define GREEN RGB(0, 255, 0)
+#define BLUE RGB(0, 0, 255)
+#define YELLOW RGB(255, 255, 0)
+#define LIGHT_BLUE RGB(0, 255, 255)
+#define MAGENTA RGB(255, 0, 255)
+#define WHITE RGB(255, 255, 255)
 
 #define INITIALIZING_COLOR YELLOW
 #define CONNECTING_COLOR BLUE
@@ -11,4 +24,4 @@ typedef enum { RED, GREEN, BLUE, YELLOW, LIGHT_BLUE, MAGENTA, WHITE, NB_COLORS }
 #define DEFAULT_LED_INTENSITY 10
 
 void led_init(void);
-void led_set(Color color, uint16_t intensity);
+void led_set(RgbColor color, uint16_t intensity);
