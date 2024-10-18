@@ -2,6 +2,7 @@
 #include "led.h"
 #include "zigbee.h"
 #include <esp_log.h>
+#include <hal/efuse_hal.h>
 #include <nvs_flash.h>
 #include <soc/gpio_num.h>
 #include <stdio.h>
@@ -26,6 +27,8 @@ static void setup_button() {
 
 void app_main(void) {
     ESP_ERROR_CHECK(nvs_flash_init());
+
+    printf("Chip revision: %lu.%lu\n", efuse_hal_get_major_chip_version(), efuse_hal_get_minor_chip_version());
 
     led_init();
 
