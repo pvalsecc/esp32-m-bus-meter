@@ -18,6 +18,13 @@ static const char *TAG = "zigbee";
     ESP_ZB_TRANSCEIVER_ALL_CHANNELS_MASK /* Zigbee primary channel mask use in                                         \
                                             the example */
 
+#define BASIC_MANUFACTURER_NAME " Patrick Valsecchi" /* < Reserve first char for the size of string */
+#define BASIC_MANUFACTURER_NAME_SIZE                                                                                   \
+    (sizeof(BASIC_MANUFACTURER_NAME) - 2) /* < Size of BASIC_MANUFACTURER_NAME without first space */
+
+#define BASIC_MODEL_NAME " SmartMeter"                       /* < Reserve first char for the size of string */
+#define BASIC_MODEL_NAME_SIZE (sizeof(BASIC_MODEL_NAME) - 2) /* < Size of BASIC_MODEL_NAME without first space */
+
 static esp_err_t deferred_driver_init(void) {
     led_set(CONNECTING_COLOR, DEFAULT_LED_INTENSITY);
     return ESP_OK;
@@ -47,6 +54,7 @@ void esp_zb_app_signal_handler(esp_zb_app_signal_t *signal_struct) {
                 esp_zb_bdb_start_top_level_commissioning(ESP_ZB_BDB_MODE_NETWORK_STEERING);
             } else {
                 ESP_LOGI(TAG, "Device rebooted");
+                led_set(CONNECTED_COLOR, DEFAULT_LED_INTENSITY);
             }
         } else {
             /* commissioning failed */
@@ -72,6 +80,7 @@ void esp_zb_app_signal_handler(esp_zb_app_signal_t *signal_struct) {
         break;
     case ESP_ZB_ZDO_SIGNAL_LEAVE:
         ESP_LOGI(TAG, "Re-start network steering");
+        led_set(CONNECTING_COLOR, DEFAULT_LED_INTENSITY);
         esp_zb_bdb_start_top_level_commissioning(ESP_ZB_BDB_MODE_NETWORK_STEERING);
         break;
     default:
@@ -90,17 +99,31 @@ static esp_err_t zigbee_attribute_handler(const esp_zb_zcl_set_attr_value_messag
                         "Received message: error status(%d)", message->info.status);
     ESP_LOGI(TAG,
              "Received message: endpoint(%d), cluster(0x%x), attribute(0x%x), "
-             "data size(%d)",
-             message->info.dst_endpoint, message->info.cluster, message->attribute.id, message->attribute.data.size);
+             "data size(%d), type(0x%x)",
+             message->info.dst_endpoint, message->info.cluster, message->attribute.id, message->attribute.data.size,
+             message->attribute.data.type);
     if (message->info.dst_endpoint == HA_ESP_LIGHT_ENDPOINT) {
-        if (message->info.cluster == ESP_ZB_ZCL_CLUSTER_ID_ON_OFF) {
+        switch (message->info.cluster) {
+        case ESP_ZB_ZCL_CLUSTER_ID_ON_OFF:
             if (message->attribute.id == ESP_ZB_ZCL_ATTR_ON_OFF_ON_OFF_ID &&
                 message->attribute.data.type == ESP_ZB_ZCL_ATTR_TYPE_BOOL) {
                 light_state = message->attribute.data.value ? *(bool *)message->attribute.data.value : light_state;
                 ESP_LOGI(TAG, "Light sets to %s", light_state ? "On" : "Off");
                 led_set(light_state ? WHITE : CONNECTED_COLOR, light_state ? 100 : DEFAULT_LED_INTENSITY);
+            } else {
+                ESP_LOGW(TAG, "Unknown attribute ep=LIGHT cl=ON_OFF attr=0x%x", message->attribute.id);
             }
+            break;
+        case ESP_ZB_ZCL_CLUSTER_ID_IDENTIFY:
+            led_set(IDENTIFY_COLOR, DEFAULT_LED_INTENSITY);
+            led_set(CONNECTED_COLOR, DEFAULT_LED_INTENSITY);
+            break;
+        default:
+            ESP_LOGW(TAG, "Unknown attribute ep=LIGHT cl=0x%x attr=0x%x", message->info.cluster, message->attribute.id);
         }
+    } else {
+        ESP_LOGW(TAG, "Unknown attribute ep=%d cl=0x%x attr=0x%x", message->info.dst_endpoint, message->info.cluster,
+                 message->attribute.id);
     }
     return ret;
 }
@@ -118,10 +141,68 @@ static esp_err_t zigbee_action_handler(esp_zb_core_action_callback_id_t callback
     return ret;
 }
 
+static esp_zb_ep_list_t *zigbee_create_ep_list() {
+    esp_zb_ep_list_t *epList = esp_zb_ep_list_create();
+
+    esp_zb_cluster_list_t *clusterList = esp_zb_zcl_cluster_list_create();
+
+    // basic cluster
+    esp_zb_attribute_list_t *esp_zb_basic_cluster = esp_zb_zcl_attr_list_create(ESP_ZB_ZCL_CLUSTER_ID_BASIC);
+    uint8_t zcl_version = ESP_ZB_ZCL_BASIC_ZCL_VERSION_DEFAULT_VALUE;
+    ESP_ERROR_CHECK(
+        esp_zb_basic_cluster_add_attr(esp_zb_basic_cluster, ESP_ZB_ZCL_ATTR_BASIC_ZCL_VERSION_ID, &zcl_version));
+    uint8_t application_version = ESP_ZB_ZCL_BASIC_APPLICATION_VERSION_DEFAULT_VALUE;
+    ESP_ERROR_CHECK(esp_zb_basic_cluster_add_attr(esp_zb_basic_cluster, ESP_ZB_ZCL_ATTR_BASIC_APPLICATION_VERSION_ID,
+                                                  &application_version));
+    uint8_t stack_version = ESP_ZB_ZCL_BASIC_STACK_VERSION_DEFAULT_VALUE;
+    ESP_ERROR_CHECK(
+        esp_zb_basic_cluster_add_attr(esp_zb_basic_cluster, ESP_ZB_ZCL_ATTR_BASIC_STACK_VERSION_ID, &stack_version));
+    uint8_t hw_version = ESP_ZB_ZCL_BASIC_HW_VERSION_DEFAULT_VALUE;
+    ESP_ERROR_CHECK(
+        esp_zb_basic_cluster_add_attr(esp_zb_basic_cluster, ESP_ZB_ZCL_ATTR_BASIC_HW_VERSION_ID, &hw_version));
+    char manufacturer_name[BASIC_MANUFACTURER_NAME_SIZE + 1] = BASIC_MANUFACTURER_NAME;
+    manufacturer_name[0] = BASIC_MANUFACTURER_NAME_SIZE;
+    ESP_ERROR_CHECK(esp_zb_basic_cluster_add_attr(esp_zb_basic_cluster, ESP_ZB_ZCL_ATTR_BASIC_MANUFACTURER_NAME_ID,
+                                                  &manufacturer_name[0]));
+    char model_identifier[BASIC_MODEL_NAME_SIZE + 1] = BASIC_MODEL_NAME;
+    model_identifier[0] = BASIC_MODEL_NAME_SIZE;
+    ESP_ERROR_CHECK(esp_zb_basic_cluster_add_attr(esp_zb_basic_cluster, ESP_ZB_ZCL_ATTR_BASIC_MODEL_IDENTIFIER_ID,
+                                                  &model_identifier[0]));
+    ESP_ERROR_CHECK(
+        esp_zb_cluster_list_add_basic_cluster(clusterList, esp_zb_basic_cluster, ESP_ZB_ZCL_CLUSTER_SERVER_ROLE));
+
+    // identify cluster
+    esp_zb_attribute_list_t *esp_zb_identify_cluster = esp_zb_zcl_attr_list_create(ESP_ZB_ZCL_CLUSTER_ID_IDENTIFY);
+    uint16_t identify_time = ESP_ZB_ZCL_IDENTIFY_IDENTIFY_TIME_DEFAULT_VALUE;
+    ESP_ERROR_CHECK(esp_zb_identify_cluster_add_attr(esp_zb_identify_cluster, ESP_ZB_ZCL_ATTR_IDENTIFY_IDENTIFY_TIME_ID,
+                                                     &identify_time));
+    ESP_ERROR_CHECK(
+        esp_zb_cluster_list_add_identify_cluster(clusterList, esp_zb_identify_cluster, ESP_ZB_ZCL_CLUSTER_SERVER_ROLE));
+
+    // on-off cluster
+    esp_zb_on_off_cluster_cfg_t onOffCfg = {.on_off = false};
+    esp_zb_attribute_list_t *onOffCluster = esp_zb_on_off_cluster_create(&onOffCfg);
+    ESP_ERROR_CHECK(esp_zb_cluster_list_add_on_off_cluster(clusterList, onOffCluster, ESP_ZB_ZCL_CLUSTER_SERVER_ROLE));
+
+    // identify client cluster
+    esp_zb_attribute_list_t *esp_zb_identify_client_cluster =
+        esp_zb_zcl_attr_list_create(ESP_ZB_ZCL_CLUSTER_ID_IDENTIFY);
+    ESP_ERROR_CHECK(esp_zb_cluster_list_add_identify_cluster(clusterList, esp_zb_identify_client_cluster,
+                                                             ESP_ZB_ZCL_CLUSTER_CLIENT_ROLE));
+
+    esp_zb_endpoint_config_t onOffEpConfig = {
+        .endpoint = HA_ESP_LIGHT_ENDPOINT,
+        .app_profile_id = ESP_ZB_AF_HA_PROFILE_ID,
+        .app_device_id = ESP_ZB_HA_ON_OFF_LIGHT_DEVICE_ID,
+    };
+    ESP_ERROR_CHECK(esp_zb_ep_list_add_ep(epList, clusterList, onOffEpConfig));
+    return epList;
+}
+
 static void zigbee_task(void *pvParameters) {
     /* initialize Zigbee stack */
     esp_zb_cfg_t zb_nwk_cfg = {
-        .esp_zb_role = ESP_ZB_DEVICE_TYPE_ED,
+        .esp_zb_role = ESP_ZB_DEVICE_TYPE_ROUTER,
         .install_code_policy = INSTALLCODE_POLICY_ENABLE,
         .nwk_cfg.zed_cfg =
             {
@@ -130,14 +211,13 @@ static void zigbee_task(void *pvParameters) {
             },
     };
     esp_zb_init(&zb_nwk_cfg);
-    esp_zb_on_off_light_cfg_t light_cfg = ESP_ZB_DEFAULT_ON_OFF_LIGHT_CONFIG();
-    esp_zb_ep_list_t *esp_zb_on_off_light_ep = esp_zb_on_off_light_ep_create(HA_ESP_LIGHT_ENDPOINT, &light_cfg);
+
+    esp_zb_ep_list_t *esp_zb_on_off_light_ep = zigbee_create_ep_list();
     esp_zb_device_register(esp_zb_on_off_light_ep);
+
     esp_zb_core_action_handler_register(zigbee_action_handler);
     esp_zb_set_primary_network_channel_set(ESP_ZB_PRIMARY_CHANNEL_MASK);
-    int8_t power;
-    esp_zb_get_tx_power(&power);
-    ESP_LOGI(TAG, "tx_power=%d/%d", power, IEEE802154_TXPOWER_VALUE_MAX);
+
     ESP_ERROR_CHECK(esp_zb_start(false));
     esp_zb_stack_main_loop();
 }

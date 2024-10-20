@@ -21,5 +21,4 @@ void led_init(void) {
     };
     led_strip_rmt_config_t rmt_conf = {};
     ESP_ERROR_CHECK(led_strip_new_rmt_device(&led_strip_conf, &rmt_conf, &s_led_strip));
-    led_set(INITIALIZING_COLOR, DEFAULT_LED_INTENSITY);
 }

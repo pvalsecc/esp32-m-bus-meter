@@ -17,11 +17,11 @@ typedef struct {
 #define MAGENTA RGB(255, 0, 255)
 #define WHITE RGB(255, 255, 255)
 
-#define INITIALIZING_COLOR YELLOW
 #define CONNECTING_COLOR BLUE
 #define CONNECTED_COLOR GREEN
+#define IDENTIFY_COLOR RED
 
-#define DEFAULT_LED_INTENSITY 5
+#define DEFAULT_LED_INTENSITY 2
 
 void led_init(void);
 void led_set(RgbColor color, uint16_t intensity);
