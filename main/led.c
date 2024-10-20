@@ -40,13 +40,9 @@ void led_init(void) {
 
     // LED strip backend configuration: RMT
     led_strip_rmt_config_t rmt_config = {
-#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)
-        .rmt_channel = 0,
-#else
         .clk_src = RMT_CLK_SRC_DEFAULT, // different clock source can lead to different power consumption
         .resolution_hz = 0,             // RMT counter clock frequency
         .flags.with_dma = false,        // DMA feature is available on ESP target like ESP32-S3
-#endif
     };
 
     led_indicator_strips_config_t strips_config = {
