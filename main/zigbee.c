@@ -115,8 +115,7 @@ static esp_err_t zigbee_attribute_handler(const esp_zb_zcl_set_attr_value_messag
             }
             break;
         case ESP_ZB_ZCL_CLUSTER_ID_IDENTIFY:
-            led_set(IDENTIFY_COLOR, DEFAULT_LED_INTENSITY);
-            led_set(CONNECTED_COLOR, DEFAULT_LED_INTENSITY);
+            led_blink(BLINK_IDENTIFY);
             break;
         default:
             ESP_LOGW(TAG, "Unknown attribute ep=LIGHT cl=0x%x attr=0x%x", message->info.cluster, message->attribute.id);

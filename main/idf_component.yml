@@ -1,8 +1,8 @@
 ## IDF Component Manager Manifest File
 dependencies:
+  espressif/led_indicator: "*"
   espressif/button: "*"
   espressif/esp-zboss-lib: "*"
-  espressif/led_strip: "*"
   espressif/esp-zigbee-lib: "*"
   ## Required IDF version
   idf:

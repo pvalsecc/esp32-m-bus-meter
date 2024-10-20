@@ -21,7 +21,17 @@ typedef struct {
 #define CONNECTED_COLOR GREEN
 #define IDENTIFY_COLOR RED
 
-#define DEFAULT_LED_INTENSITY 2
+#define DEFAULT_LED_INTENSITY 20
+
+/**
+ * @brief Define blinking type and priority.
+ *
+ */
+typedef enum {
+    BLINK_IDENTIFY = 0,
+    BLINK_MAX,
+} BlinkType;
 
 void led_init(void);
 void led_set(RgbColor color, uint16_t intensity);
+void led_blink(BlinkType type);
