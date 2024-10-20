@@ -88,9 +88,12 @@ static esp_err_t zigbee_attribute_handler(const esp_zb_zcl_set_attr_value_messag
              "data size(%d), type(0x%x)",
              message->info.dst_endpoint, message->info.cluster, message->attribute.id, message->attribute.data.size,
              message->attribute.data.type);
-    if (message->info.dst_endpoint == LIGHT_ENDPOINT_ID) {
+    switch (message->info.dst_endpoint) {
+    case METER_ENDPOINT_ID:
+        return zigbee_meter_attribute_handler(message);
+    case LIGHT_ENDPOINT_ID:
         return zigbee_light_attribute_handler(message);
-    } else {
+    default:
         ESP_LOGW(TAG, "Unknown attribute ep=%d cl=0x%x attr=0x%x", message->info.dst_endpoint, message->info.cluster,
                  message->attribute.id);
         return ESP_FAIL;
@@ -112,8 +115,8 @@ static esp_err_t zigbee_action_handler(esp_zb_core_action_callback_id_t callback
 
 static esp_zb_ep_list_t *zigbee_create_ep_list() {
     esp_zb_ep_list_t *epList = esp_zb_ep_list_create();
-    zigbee_light_create_ep(epList);
     zigbee_meter_create_ep(epList);
+    zigbee_light_create_ep(epList);
     return epList;
 }
 

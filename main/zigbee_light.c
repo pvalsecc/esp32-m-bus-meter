@@ -11,7 +11,6 @@ void zigbee_light_create_ep(esp_zb_ep_list_t *epList) {
     esp_zb_cluster_list_t *clusterList = esp_zb_zcl_cluster_list_create();
 
     zigbee_create_basic_cluster(clusterList, "TestLight");
-    zigbee_create_indentify_cluster(clusterList);
 
     // on-off cluster
     esp_zb_on_off_cluster_cfg_t onOffCfg = {.on_off = false};
@@ -37,9 +36,6 @@ esp_err_t zigbee_light_attribute_handler(const esp_zb_zcl_set_attr_value_message
         } else {
             ESP_LOGW(TAG, "Unknown attribute ep=LIGHT cl=ON_OFF attr=0x%x", message->attribute.id);
         }
-        return ESP_OK;
-    case ESP_ZB_ZCL_CLUSTER_ID_IDENTIFY:
-        led_blink(BLINK_IDENTIFY);
         return ESP_OK;
     default:
         ESP_LOGW(TAG, "Unknown attribute ep=LIGHT cl=0x%x attr=0x%x", message->info.cluster, message->attribute.id);

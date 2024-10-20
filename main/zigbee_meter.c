@@ -31,13 +31,24 @@ void zigbee_meter_create_ep(esp_zb_ep_list_t *epList) {
     // electrical measurement cluster
     esp_zb_attribute_list_t *esp_zb_electrical_measurement_cluster =
         esp_zb_zcl_attr_list_create(ESP_ZB_ZCL_CLUSTER_ID_ELECTRICAL_MEASUREMENT);
-    uint32_t measurement_type = (1 << PHASE_A_MEASUREMENT);
+
+    uint32_t measurement_type = (1 << PHASE_A_MEASUREMENT) | (1 << PHASE_B_MEASUREMENT) | (1 << PHASE_C_MEASUREMENT);
     ESP_ERROR_CHECK(esp_zb_electrical_meas_cluster_add_attr(esp_zb_electrical_measurement_cluster,
                                                             ESP_ZB_ZCL_ATTR_ELECTRICAL_MEASUREMENT_MEASUREMENT_TYPE_ID,
                                                             &measurement_type));
-    int32_t active_power = 42; // Watts
-    ESP_ERROR_CHECK(esp_zb_electrical_meas_cluster_add_attr(
-        esp_zb_electrical_measurement_cluster, ESP_ZB_ZCL_ATTR_ELECTRICAL_MEASUREMENT_ACTIVE_POWER_ID, &active_power));
+    int16_t active_power_a = 42; // Watts
+    ESP_ERROR_CHECK(esp_zb_electrical_meas_cluster_add_attr(esp_zb_electrical_measurement_cluster,
+                                                            ESP_ZB_ZCL_ATTR_ELECTRICAL_MEASUREMENT_ACTIVE_POWER_ID,
+                                                            &active_power_a));
+    int16_t active_power_b = 43; // Watts
+    ESP_ERROR_CHECK(esp_zb_electrical_meas_cluster_add_attr(esp_zb_electrical_measurement_cluster,
+                                                            ESP_ZB_ZCL_ATTR_ELECTRICAL_MEASUREMENT_ACTIVE_POWER_PHB_ID,
+                                                            &active_power_b));
+    int16_t active_power_c = 44; // Watts
+    ESP_ERROR_CHECK(esp_zb_electrical_meas_cluster_add_attr(esp_zb_electrical_measurement_cluster,
+                                                            ESP_ZB_ZCL_ATTR_ELECTRICAL_MEASUREMENT_ACTIVE_POWER_PHC_ID,
+                                                            &active_power_c));
+
     ESP_ERROR_CHECK(esp_zb_cluster_list_add_electrical_meas_cluster(clusterList, esp_zb_electrical_measurement_cluster,
                                                                     ESP_ZB_ZCL_CLUSTER_SERVER_ROLE));
 
