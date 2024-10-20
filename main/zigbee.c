@@ -2,7 +2,6 @@
 #include "led.h"
 #include <esp_check.h>
 #include <esp_zigbee_core.h>
-#include <ha/esp_zigbee_ha_standard.h>
 #include <hal/ieee802154_ll.h>
 #include <zb_config_platform.h>
 
@@ -35,7 +34,7 @@ static void bdb_start_top_level_commissioning_cb(uint8_t mode_mask) {
                         "Failed to start Zigbee commissioning");
 }
 
-void esp_zb_app_signal_handler(esp_zb_app_signal_t *signal_struct) {
+__attribute__((unused)) void esp_zb_app_signal_handler(esp_zb_app_signal_t *signal_struct) {
     uint32_t *p_sg_p = signal_struct->p_app_signal;
     esp_err_t err_status = signal_struct->esp_err_status;
     esp_zb_app_signal_type_t sig_type = *p_sg_p;
@@ -167,6 +166,9 @@ static esp_zb_ep_list_t *zigbee_create_ep_list() {
     model_identifier[0] = BASIC_MODEL_NAME_SIZE;
     ESP_ERROR_CHECK(esp_zb_basic_cluster_add_attr(esp_zb_basic_cluster, ESP_ZB_ZCL_ATTR_BASIC_MODEL_IDENTIFIER_ID,
                                                   &model_identifier[0]));
+    uint8_t power_source = ESP_ZB_ZCL_BASIC_POWER_SOURCE_DEFAULT_VALUE;
+    ESP_ERROR_CHECK(
+        esp_zb_basic_cluster_add_attr(esp_zb_basic_cluster, ESP_ZB_ZCL_ATTR_BASIC_POWER_SOURCE_ID, &power_source));
     ESP_ERROR_CHECK(
         esp_zb_cluster_list_add_basic_cluster(clusterList, esp_zb_basic_cluster, ESP_ZB_ZCL_CLUSTER_SERVER_ROLE));
 
