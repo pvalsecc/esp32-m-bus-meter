@@ -1,6 +1,7 @@
 #include "zigbee.h"
 #include "led.h"
 #include "zigbee_light.h"
+#include "zigbee_meter.h"
 #include "zigbee_utils.h"
 #include <esp_check.h>
 #include <esp_zigbee_core.h>
@@ -112,6 +113,7 @@ static esp_err_t zigbee_action_handler(esp_zb_core_action_callback_id_t callback
 static esp_zb_ep_list_t *zigbee_create_ep_list() {
     esp_zb_ep_list_t *epList = esp_zb_ep_list_create();
     zigbee_light_create_ep(epList);
+    zigbee_meter_create_ep(epList);
     return epList;
 }
 
