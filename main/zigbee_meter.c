@@ -66,12 +66,14 @@ static void create_metering_ep(esp_zb_ep_list_t *epList) {
     uint64_t currentSummationDelivered = 34567;
     ESP_ERROR_CHECK(esp_zb_cluster_add_attr(
         meteringCluster, ESP_ZB_ZCL_CLUSTER_ID_METERING, ESP_ZB_ZCL_ATTR_METERING_CURRENT_SUMMATION_DELIVERED_ID,
-        ESP_ZB_ZCL_ATTR_TYPE_U48, ESP_ZB_ZCL_ATTR_ACCESS_READ_ONLY, &currentSummationDelivered));
+        ESP_ZB_ZCL_ATTR_TYPE_U48, ESP_ZB_ZCL_ATTR_ACCESS_READ_ONLY | ESP_ZB_ZCL_ATTR_ACCESS_REPORTING,
+        &currentSummationDelivered));
 
     uint64_t currentSummationReceived = 0;
     ESP_ERROR_CHECK(esp_zb_cluster_add_attr(
         meteringCluster, ESP_ZB_ZCL_CLUSTER_ID_METERING, ESP_ZB_ZCL_ATTR_METERING_CURRENT_SUMMATION_RECEIVED_ID,
-        ESP_ZB_ZCL_ATTR_TYPE_U48, ESP_ZB_ZCL_ATTR_ACCESS_READ_ONLY, &currentSummationReceived));
+        ESP_ZB_ZCL_ATTR_TYPE_U48, ESP_ZB_ZCL_ATTR_ACCESS_READ_ONLY | ESP_ZB_ZCL_ATTR_ACCESS_REPORTING,
+        &currentSummationReceived));
 
     ESP_ERROR_CHECK(
         esp_zb_cluster_list_add_metering_cluster(clusterList, meteringCluster, ESP_ZB_ZCL_CLUSTER_SERVER_ROLE));
@@ -112,7 +114,7 @@ void zigbee_meter_update_active_power(int16_t powerWatts) {
 
     if (state != ESP_ZB_ZCL_STATUS_SUCCESS) {
         esp_zb_lock_release();
-        ESP_LOGE(TAG, "Setting active power attribute failed!");
+        ESP_LOGE(TAG, "Setting active power attribute failed: %d", state);
         return;
     }
 
@@ -121,7 +123,7 @@ void zigbee_meter_update_active_power(int16_t powerWatts) {
 
     /* Check for error */
     if (state != ESP_ZB_ZCL_STATUS_SUCCESS) {
-        ESP_LOGE(TAG, "Sending active power attribute report command failed!");
+        ESP_LOGE(TAG, "Sending active power attribute report command failed: %d", state);
         return;
     }
 }
@@ -139,7 +141,7 @@ static void updateElectricalMeasurementUint16Attr(uint8_t endpoint, uint16_t att
 
     if (state != ESP_ZB_ZCL_STATUS_SUCCESS) {
         esp_zb_lock_release();
-        ESP_LOGE(TAG, "Setting %04x electrical measurement attribute failed!", attrId);
+        ESP_LOGE(TAG, "Setting %04x electrical measurement attribute failed: %d", attrId, state);
         return;
     }
 
@@ -148,7 +150,7 @@ static void updateElectricalMeasurementUint16Attr(uint8_t endpoint, uint16_t att
 
     /* Check for error */
     if (state != ESP_ZB_ZCL_STATUS_SUCCESS) {
-        ESP_LOGE(TAG, "Sending %04x electrical measurement attribute report command failed!", attrId);
+        ESP_LOGE(TAG, "Sending %04x electrical measurement attribute report command failed: %d", attrId, state);
         return;
     }
 }
@@ -176,7 +178,7 @@ static void updateMeteringUint64Attr(uint8_t endpoint, uint16_t attrId, uint64_t
 
     if (state != ESP_ZB_ZCL_STATUS_SUCCESS) {
         esp_zb_lock_release();
-        ESP_LOGE(TAG, "Setting %04x metering attribute failed!", attrId);
+        ESP_LOGE(TAG, "Setting %04x metering attribute failed: %d", attrId, state);
         return;
     }
 
@@ -185,7 +187,7 @@ static void updateMeteringUint64Attr(uint8_t endpoint, uint16_t attrId, uint64_t
 
     /* Check for error */
     if (state != ESP_ZB_ZCL_STATUS_SUCCESS) {
-        ESP_LOGE(TAG, "Sending %04x metering attribute report command failed!", attrId);
+        ESP_LOGE(TAG, "Sending %04x metering attribute report command failed: %d", attrId, state);
         return;
     }
 }
