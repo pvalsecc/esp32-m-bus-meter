@@ -7,3 +7,4 @@
 
 void zigbee_meter_create_ep(esp_zb_ep_list_t *epList);
 esp_err_t zigbee_meter_attribute_handler(const esp_zb_zcl_set_attr_value_message_t *message);
+void zigbee_meter_update_active_power(int phase, int16_t power);

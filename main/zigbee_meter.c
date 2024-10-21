@@ -56,3 +56,34 @@ esp_err_t zigbee_meter_attribute_handler(const esp_zb_zcl_set_attr_value_message
     ESP_LOGW(TAG, "Unknown attribute ep=METER cl=0x%x attr=0x%x", message->info.cluster, message->attribute.id);
     return ESP_FAIL;
 }
+
+void zigbee_meter_update_active_power(int phase, int16_t power) {
+    if (phase < 0 || phase >= 3) {
+        ESP_LOGE(TAG, "Invalid phase: %d", phase);
+        return;
+    }
+
+    esp_zb_zcl_report_attr_cmd_t electrical_measurement_cmd_req = {
+        .zcl_basic_cmd.src_endpoint = METER_ENDPOINT_ID + phase,
+        .address_mode = ESP_ZB_APS_ADDR_MODE_DST_ADDR_ENDP_NOT_PRESENT,
+        .clusterID = ESP_ZB_ZCL_CLUSTER_ID_ELECTRICAL_MEASUREMENT,
+        .cluster_role = ESP_ZB_ZCL_CLUSTER_SERVER_ROLE,
+        .attributeID = ESP_ZB_ZCL_ATTR_ELECTRICAL_MEASUREMENT_ACTIVE_POWER_ID};
+
+    esp_zb_zcl_status_t state = esp_zb_zcl_set_attribute_val(
+        electrical_measurement_cmd_req.zcl_basic_cmd.src_endpoint, electrical_measurement_cmd_req.clusterID,
+        electrical_measurement_cmd_req.cluster_role, electrical_measurement_cmd_req.attributeID, &power, false);
+
+    if (state != ESP_ZB_ZCL_STATUS_SUCCESS) {
+        ESP_LOGE(TAG, "Setting active power attribute failed!");
+        return;
+    }
+
+    state = esp_zb_zcl_report_attr_cmd_req(&electrical_measurement_cmd_req);
+
+    /* Check for error */
+    if (state != ESP_ZB_ZCL_STATUS_SUCCESS) {
+        ESP_LOGE(TAG, "Sending active power attribute report command failed!");
+        return;
+    }
+}

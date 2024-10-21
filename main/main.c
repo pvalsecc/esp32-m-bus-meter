@@ -2,6 +2,7 @@
 #include "led.h"
 #include "uart.h"
 #include "zigbee.h"
+#include "zigbee_meter.h"
 #include <esp_log.h>
 #include <hal/efuse_hal.h>
 #include <nvs_flash.h>
@@ -10,6 +11,10 @@
 
 static const char *TAG = "main";
 static void long_press(void *arg, void *usr_data) { zigbee_reset_pairing(); }
+static void single_click(void *arg, void *usr_data) {
+    static int16_t power = 0;
+    zigbee_meter_update_active_power(1, ++power);
+}
 
 static void setup_button() {
     button_config_t gpio_btn_cfg = {
@@ -24,6 +29,7 @@ static void setup_button() {
         ESP_LOGE(TAG, "Button create failed");
     }
     iot_button_register_cb(gpio_btn, BUTTON_LONG_PRESS_START, long_press, NULL);
+    iot_button_register_cb(gpio_btn, BUTTON_SINGLE_CLICK, single_click, NULL);
 }
 
 void app_main(void) {
