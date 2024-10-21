@@ -10,10 +10,32 @@
 #include <stdio.h>
 
 static const char *TAG = "main";
+
 static void long_press(void *arg, void *usr_data) { zigbee_reset_pairing(); }
+
+static int16_t curValue = 0;
+
 static void single_click(void *arg, void *usr_data) {
-    static int16_t power = 0;
-    zigbee_meter_update_active_power(1, ++power);
+    static int values[7] = {};
+    int newValue = ++values[curValue];
+    if (curValue == 0) {
+        ESP_LOGI(TAG, "Set power to %d", newValue);
+        zigbee_meter_update_active_power(newValue);
+    } else if (curValue >= 1 && curValue <= 3) {
+        zigbee_meter_update_rms_current(curValue - 1, newValue);
+    } else if (curValue >= 4 && curValue <= 6) {
+        zigbee_meter_update_rms_voltage(curValue - 4, newValue);
+    } else if (curValue == 7) {
+        zigbee_meter_update_summation_received(newValue);
+    } else if (curValue == 8) {
+        zigbee_meter_update_summation_delivered(newValue);
+    }
+}
+
+static void double_click(void *arg, void *usr_data) {
+    curValue = (curValue + 1) % 9;
+    ESP_LOGI(TAG, "Switch to value %d", curValue + 1);
+    single_click(arg, usr_data);
 }
 
 static void setup_button() {
@@ -30,6 +52,7 @@ static void setup_button() {
     }
     iot_button_register_cb(gpio_btn, BUTTON_LONG_PRESS_START, long_press, NULL);
     iot_button_register_cb(gpio_btn, BUTTON_SINGLE_CLICK, single_click, NULL);
+    iot_button_register_cb(gpio_btn, BUTTON_DOUBLE_CLICK, double_click, NULL);
 }
 
 void app_main(void) {
