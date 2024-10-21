@@ -96,6 +96,8 @@ static esp_err_t zigbee_attribute_handler(const esp_zb_zcl_set_attr_value_messag
 
     switch (message->info.dst_endpoint) {
     case METER_ENDPOINT_ID:
+    case METER_ENDPOINT_ID + 1:
+    case METER_ENDPOINT_ID + 2:
         return zigbee_meter_attribute_handler(message);
     case LIGHT_ENDPOINT_ID:
         return zigbee_light_attribute_handler(message);

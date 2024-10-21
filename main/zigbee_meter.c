@@ -23,41 +23,33 @@ typedef enum {
 } MeasurementType;
 
 void zigbee_meter_create_ep(esp_zb_ep_list_t *epList) {
-    esp_zb_cluster_list_t *clusterList = esp_zb_zcl_cluster_list_create();
+    // Home assistant doesn't support phb and phc attributes => one end point per phase
+    for (int16_t phase = 0; phase < 3; ++phase) {
+        esp_zb_cluster_list_t *clusterList = esp_zb_zcl_cluster_list_create();
 
-    zigbee_create_basic_cluster(clusterList, "SmartMeter");
-    zigbee_create_indentify_cluster(clusterList);
+        // electrical measurement cluster
+        esp_zb_attribute_list_t *esp_zb_electrical_measurement_cluster =
+            esp_zb_zcl_attr_list_create(ESP_ZB_ZCL_CLUSTER_ID_ELECTRICAL_MEASUREMENT);
 
-    // electrical measurement cluster
-    esp_zb_attribute_list_t *esp_zb_electrical_measurement_cluster =
-        esp_zb_zcl_attr_list_create(ESP_ZB_ZCL_CLUSTER_ID_ELECTRICAL_MEASUREMENT);
+        uint32_t measurement_type = (1 << PHASE_A_MEASUREMENT);
+        ESP_ERROR_CHECK(esp_zb_electrical_meas_cluster_add_attr(
+            esp_zb_electrical_measurement_cluster, ESP_ZB_ZCL_ATTR_ELECTRICAL_MEASUREMENT_MEASUREMENT_TYPE_ID,
+            &measurement_type));
+        int16_t active_power_a = 42 + phase; // Watts
+        ESP_ERROR_CHECK(esp_zb_electrical_meas_cluster_add_attr(esp_zb_electrical_measurement_cluster,
+                                                                ESP_ZB_ZCL_ATTR_ELECTRICAL_MEASUREMENT_ACTIVE_POWER_ID,
+                                                                &active_power_a));
 
-    uint32_t measurement_type = (1 << PHASE_A_MEASUREMENT) | (1 << PHASE_B_MEASUREMENT) | (1 << PHASE_C_MEASUREMENT);
-    ESP_ERROR_CHECK(esp_zb_electrical_meas_cluster_add_attr(esp_zb_electrical_measurement_cluster,
-                                                            ESP_ZB_ZCL_ATTR_ELECTRICAL_MEASUREMENT_MEASUREMENT_TYPE_ID,
-                                                            &measurement_type));
-    int16_t active_power_a = 42; // Watts
-    ESP_ERROR_CHECK(esp_zb_electrical_meas_cluster_add_attr(esp_zb_electrical_measurement_cluster,
-                                                            ESP_ZB_ZCL_ATTR_ELECTRICAL_MEASUREMENT_ACTIVE_POWER_ID,
-                                                            &active_power_a));
-    int16_t active_power_b = 43; // Watts
-    ESP_ERROR_CHECK(esp_zb_electrical_meas_cluster_add_attr(esp_zb_electrical_measurement_cluster,
-                                                            ESP_ZB_ZCL_ATTR_ELECTRICAL_MEASUREMENT_ACTIVE_POWER_PHB_ID,
-                                                            &active_power_b));
-    int16_t active_power_c = 44; // Watts
-    ESP_ERROR_CHECK(esp_zb_electrical_meas_cluster_add_attr(esp_zb_electrical_measurement_cluster,
-                                                            ESP_ZB_ZCL_ATTR_ELECTRICAL_MEASUREMENT_ACTIVE_POWER_PHC_ID,
-                                                            &active_power_c));
+        ESP_ERROR_CHECK(esp_zb_cluster_list_add_electrical_meas_cluster(
+            clusterList, esp_zb_electrical_measurement_cluster, ESP_ZB_ZCL_CLUSTER_SERVER_ROLE));
 
-    ESP_ERROR_CHECK(esp_zb_cluster_list_add_electrical_meas_cluster(clusterList, esp_zb_electrical_measurement_cluster,
-                                                                    ESP_ZB_ZCL_CLUSTER_SERVER_ROLE));
-
-    esp_zb_endpoint_config_t onOffEpConfig = {
-        .endpoint = METER_ENDPOINT_ID,
-        .app_profile_id = ESP_ZB_AF_HA_PROFILE_ID,
-        .app_device_id = ESP_ZB_HA_METER_INTERFACE_DEVICE_ID,
-    };
-    ESP_ERROR_CHECK(esp_zb_ep_list_add_ep(epList, clusterList, onOffEpConfig));
+        esp_zb_endpoint_config_t onOffEpConfig = {
+            .endpoint = METER_ENDPOINT_ID + phase,
+            .app_profile_id = ESP_ZB_AF_HA_PROFILE_ID,
+            .app_device_id = ESP_ZB_HA_METER_INTERFACE_DEVICE_ID,
+        };
+        ESP_ERROR_CHECK(esp_zb_ep_list_add_ep(epList, clusterList, onOffEpConfig));
+    }
 }
 
 esp_err_t zigbee_meter_attribute_handler(const esp_zb_zcl_set_attr_value_message_t *message) {
