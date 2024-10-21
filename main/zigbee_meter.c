@@ -61,12 +61,6 @@ void zigbee_meter_create_ep(esp_zb_ep_list_t *epList) {
 }
 
 esp_err_t zigbee_meter_attribute_handler(const esp_zb_zcl_set_attr_value_message_t *message) {
-    switch (message->info.cluster) {
-    case ESP_ZB_ZCL_CLUSTER_ID_IDENTIFY:
-        led_blink(BLINK_IDENTIFY);
-        return ESP_OK;
-    default:
-        ESP_LOGW(TAG, "Unknown attribute ep=METER cl=0x%x attr=0x%x", message->info.cluster, message->attribute.id);
-        return ESP_FAIL;
-    }
+    ESP_LOGW(TAG, "Unknown attribute ep=METER cl=0x%x attr=0x%x", message->info.cluster, message->attribute.id);
+    return ESP_FAIL;
 }

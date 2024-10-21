@@ -88,6 +88,12 @@ static esp_err_t zigbee_attribute_handler(const esp_zb_zcl_set_attr_value_messag
              "data size(%d), type(0x%x)",
              message->info.dst_endpoint, message->info.cluster, message->attribute.id, message->attribute.data.size,
              message->attribute.data.type);
+
+    if (message->info.cluster == ESP_ZB_ZCL_CLUSTER_ID_IDENTIFY) {
+        led_blink(BLINK_IDENTIFY);
+        return ESP_OK;
+    }
+
     switch (message->info.dst_endpoint) {
     case METER_ENDPOINT_ID:
         return zigbee_meter_attribute_handler(message);
