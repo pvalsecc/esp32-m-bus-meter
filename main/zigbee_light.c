@@ -10,9 +10,6 @@ static const char *TAG = "zigbee_light";
 void zigbee_light_create_ep(esp_zb_ep_list_t *epList) {
     esp_zb_cluster_list_t *clusterList = esp_zb_zcl_cluster_list_create();
 
-    zigbee_create_basic_cluster(clusterList, "SmartMeter");
-    zigbee_create_indentify_cluster(clusterList);
-
     // on-off cluster
     esp_zb_on_off_cluster_cfg_t onOffCfg = {.on_off = false};
     esp_zb_attribute_list_t *onOffCluster = esp_zb_on_off_cluster_create(&onOffCfg);

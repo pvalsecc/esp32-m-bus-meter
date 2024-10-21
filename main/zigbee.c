@@ -2,7 +2,7 @@
 #include "led.h"
 #include "zigbee_light.h"
 #include "zigbee_meter.h"
-#include "zigbee_utils.h"
+#include "zigbee_temperature.h"
 #include <esp_check.h>
 #include <esp_zigbee_core.h>
 #include <string.h>
@@ -95,10 +95,10 @@ static esp_err_t zigbee_attribute_handler(const esp_zb_zcl_set_attr_value_messag
     }
 
     switch (message->info.dst_endpoint) {
+    case METERING_ENDPOINT_ID:
     case ELECTRICAL_MEASUREMENT_ENDPOINT_FIRST_ID:
     case ELECTRICAL_MEASUREMENT_ENDPOINT_FIRST_ID + 1:
     case ELECTRICAL_MEASUREMENT_ENDPOINT_FIRST_ID + 2:
-    case METERING_ENDPOINT_ID:
         return zigbee_meter_attribute_handler(message);
     case LIGHT_ENDPOINT_ID:
         return zigbee_light_attribute_handler(message);
@@ -126,6 +126,7 @@ static esp_zb_ep_list_t *zigbee_create_ep_list() {
     esp_zb_ep_list_t *epList = esp_zb_ep_list_create();
     zigbee_meter_create_ep(epList);
     zigbee_light_create_ep(epList);
+    zigbee_temperature_create_ep(epList);
     return epList;
 }
 

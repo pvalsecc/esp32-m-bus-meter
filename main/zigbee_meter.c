@@ -61,6 +61,10 @@ static void create_electrical_measurement_ep(esp_zb_ep_list_t *epList, int16_t p
 
 static void create_metering_ep(esp_zb_ep_list_t *epList) {
     esp_zb_cluster_list_t *clusterList = esp_zb_zcl_cluster_list_create();
+
+    zigbee_create_basic_cluster(clusterList, "SmartMeter");
+    zigbee_create_indentify_cluster(clusterList);
+
     esp_zb_attribute_list_t *meteringCluster = esp_zb_zcl_attr_list_create(ESP_ZB_ZCL_CLUSTER_ID_METERING);
 
     uint64_t currentSummationDelivered = 34567;
@@ -87,12 +91,12 @@ static void create_metering_ep(esp_zb_ep_list_t *epList) {
 }
 
 void zigbee_meter_create_ep(esp_zb_ep_list_t *epList) {
+    create_metering_ep(epList);
+
     // Home assistant doesn't support phb and phc attributes => one end point per phase
     for (int16_t phase = 0; phase < 3; ++phase) {
         create_electrical_measurement_ep(epList, phase);
     }
-
-    create_metering_ep(epList);
 }
 
 esp_err_t zigbee_meter_attribute_handler(const esp_zb_zcl_set_attr_value_message_t *message) {
