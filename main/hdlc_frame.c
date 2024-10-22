@@ -40,7 +40,7 @@ void hdlc_handle_byte(struct _hdlc_frame_state *state, uint8_t byte) {
             state->pos = 0;
             state->state = DATA;
         } else if (state->pos > sizeof(state->buffer)) {
-            ESP_LOGW(TAG, "Buffer overflow, ignoring the frame");
+            ESP_LOGW(TAG, "Buffer overflow, ignoring a frame");
             state->pos = 0;
             state->state = WAIT_SYNC;
         } else if (byte == 0x7D) {
@@ -51,7 +51,7 @@ void hdlc_handle_byte(struct _hdlc_frame_state *state, uint8_t byte) {
         }
         break;
     case ESCAPE:
-        state->buffer[state->pos] = byte ^ 0x20;
+        state->buffer[state->pos] = byte ^ 0x20; // bit 5 inverted
         state->pos++;
         state->state = DATA;
         break;

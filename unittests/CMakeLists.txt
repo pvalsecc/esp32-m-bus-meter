@@ -16,9 +16,14 @@ FetchContent_MakeAvailable(googletest)
 
 enable_testing()
 
+include(GoogleTest)
+
 add_executable(hdlc_frame_test hdlc_frame_test.cpp ../main/hdlc_frame.c)
 target_link_libraries(hdlc_frame_test GTest::gtest_main)
 target_include_directories(hdlc_frame_test PRIVATE ../main .)
-
-include(GoogleTest)
 gtest_discover_tests(hdlc_frame_test)
+
+add_executable(hdlc_fields_test hdlc_fields_test.cpp ../main/hdlc_fields.c)
+target_link_libraries(hdlc_fields_test GTest::gtest_main)
+target_include_directories(hdlc_fields_test PRIVATE ../main .)
+gtest_discover_tests(hdlc_fields_test)

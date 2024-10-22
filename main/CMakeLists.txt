@@ -8,5 +8,6 @@ idf_component_register(
         zigbee_temperature.c
         zigbee_utils.c
         uart.c
+        hdlc_fields.c
         hdlc_frame.c
     INCLUDE_DIRS ".")

@@ -1,4 +1,5 @@
 #include "uart.h"
+#include "hdlc_frame.h"
 #include <driver/gpio.h>
 #include <driver/uart.h>
 #include <esp_log.h>
@@ -18,10 +19,22 @@ static const uart_config_t uart_config = {
     .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
 };
 
+static void hdlc_frame_received(void *arg, uint8_t *bytes, int size) {
+    printf("Got HDLC frame:");
+    for (int i = 0; i < size; ++i) {
+        if (i % 4 == 0) {
+            printf(" ");
+        }
+        printf("%02X", bytes[i]);
+    }
+    printf("\n");
+}
+
 _Noreturn void uart_task(void *arg) {
     QueueHandle_t queue = arg;
     uint8_t *data = (uint8_t *)malloc(UART_BUF_SIZE);
     uart_event_t event;
+    struct _hdlc_frame_state *frameState = hdlc_frame_init(hdlc_frame_received, NULL);
     while (true) {
         // Waiting for UART event.
         if (xQueueReceive(queue, (void *)&event, (TickType_t)portMAX_DELAY)) {
@@ -36,6 +49,7 @@ _Noreturn void uart_task(void *arg) {
                             printf(" ");
                         }
                         printf("%02X", data[i]);
+                        hdlc_handle_byte(frameState, data[i]);
                     }
                     printf("\n");
                 }
@@ -47,8 +61,6 @@ _Noreturn void uart_task(void *arg) {
             }
         }
     }
-    free(data);
-    vTaskDelete(NULL);
 }
 
 void uart_init() {
