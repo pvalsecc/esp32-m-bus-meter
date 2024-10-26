@@ -9,7 +9,7 @@
 static const char *TAG = "uart";
 #define UART_PORT UART_NUM_1
 #define UART_TX_PIN UART_PIN_NO_CHANGE // 8
-#define UART_RX_PIN 22
+#define UART_RX_PIN 10
 #define UART_BUF_SIZE 1024
 static const uart_config_t uart_config = {
     .baud_rate = 2400,
