@@ -27,3 +27,8 @@ add_executable(hdlc_fields_test hdlc_fields_test.cpp ../main/hdlc_fields.c)
 target_link_libraries(hdlc_fields_test GTest::gtest_main)
 target_include_directories(hdlc_fields_test PRIVATE ../main .)
 gtest_discover_tests(hdlc_fields_test)
+
+add_executable(hdlc_packet_test hdlc_packet_test.cpp ../main/hdlc_packet.c ../main/hdlc_fields.c)
+target_link_libraries(hdlc_packet_test GTest::gtest_main)
+target_include_directories(hdlc_packet_test PRIVATE ../main .)
+gtest_discover_tests(hdlc_packet_test)

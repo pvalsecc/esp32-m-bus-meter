@@ -10,4 +10,5 @@ idf_component_register(
         uart.c
         hdlc_fields.c
         hdlc_frame.c
+        hdlc_packet.c
     INCLUDE_DIRS ".")

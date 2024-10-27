@@ -41,14 +41,18 @@ bool hdlc_decode_type_length(const uint8_t *bytes, int len, int *pos, uint8_t *o
 }
 
 bool hdlc_decode_address(const uint8_t *bytes, int len, int *pos, int *outAddressLen) {
-    *outAddressLen = 0;
+    if (outAddressLen) {
+        *outAddressLen = 0;
+    }
     while (true) {
         if (*pos >= len) {
             return false;
         }
         const bool last = (bytes[*pos] & 0x01) == 0x01;
         ++*pos;
-        ++*outAddressLen;
+        if (outAddressLen) {
+            ++*outAddressLen;
+        }
         if (last) {
             return true;
         }

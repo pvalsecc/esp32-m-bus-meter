@@ -8,7 +8,7 @@ extern "C" {
 
 struct _hdlc_frame_state;
 
-typedef void (*hdlc_frame_cb)(void *arg, uint8_t *bytes, int size);
+typedef void (*hdlc_frame_cb)(void *arg, const uint8_t *bytes, int size);
 
 struct _hdlc_frame_state *hdlc_frame_init(hdlc_frame_cb cb, void *arg);
 

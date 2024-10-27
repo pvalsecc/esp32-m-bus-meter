@@ -1,5 +1,7 @@
 #include "uart.h"
+#include "hdlc_fields.h"
 #include "hdlc_frame.h"
+#include "hdlc_packet.h"
 #include <driver/gpio.h>
 #include <driver/uart.h>
 #include <sys/cdefs.h>
@@ -17,13 +19,14 @@ static const uart_config_t uart_config = {
     .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
 };
 
-static void hdlc_frame_received(void *arg, uint8_t *bytes, int size) {
-    printf("Got HDLC frame:");
-    for (int i = 0; i < size; ++i) {
+static void hdlc_frame_received(void *arg, const uint8_t *bytes, int size) {
+    Information information = hdlc_packet_decode(bytes, size);
+    printf("Got frame:");
+    for (int i = 0; i < information.size; ++i) {
         if (i % 4 == 0) {
             printf(" ");
         }
-        printf("%02X", bytes[i]);
+        printf("%02X", information.bytes[i]);
     }
     printf("\n");
 }
