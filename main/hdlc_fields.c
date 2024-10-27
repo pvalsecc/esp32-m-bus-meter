@@ -1,6 +1,8 @@
 #include "hdlc_fields.h"
 #include <esp_log.h>
 
+static const char *TAG = "HDLC";
+
 // sample type 3 packet:
 // A06D CEFF 03 13 90F1 E0C0000300005C0204120003090... C951
 // ----                   frame format => type 3, in this case

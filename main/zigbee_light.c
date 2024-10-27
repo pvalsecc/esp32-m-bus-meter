@@ -1,6 +1,7 @@
 #include "zigbee_light.h"
 #include "led.h"
 #include "zigbee_utils.h"
+#include <esp_log.h>
 #include <esp_zigbee_cluster.h>
 #include <esp_zigbee_endpoint.h>
 #include <zcl/esp_zigbee_zcl_common.h>
