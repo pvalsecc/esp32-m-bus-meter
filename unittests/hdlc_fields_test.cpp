@@ -91,3 +91,9 @@ TEST(HdlcFields, crc16b) {
     int pos = sizeof(bytes) - 2;
     ASSERT_TRUE(hdlc_decode_crc16(bytes, sizeof(bytes), &pos));
 }
+
+TEST(HdlcFields, crc16c) {
+    uint8_t bytes[] = {0xA0, 0x7D, 0xCE, 0xFF, 0x03, 0x13, 0xD0, 0x45};
+    int pos = sizeof(bytes) - 2;
+    ASSERT_TRUE(hdlc_decode_crc16(bytes, sizeof(bytes), &pos));
+}
