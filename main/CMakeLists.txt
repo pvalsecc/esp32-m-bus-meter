@@ -12,4 +12,5 @@ idf_component_register(
         hdlc_frame.c
         hdlc_packet.c
         dlms.c
+        pdu.c
     INCLUDE_DIRS ".")

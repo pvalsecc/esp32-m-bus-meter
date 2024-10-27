@@ -35,3 +35,8 @@ add_executable(dlms_test dlms_test.cpp ../main/dlms.c)
 target_link_libraries(dlms_test GTest::gtest_main)
 target_include_directories(dlms_test PRIVATE ../main .)
 gtest_discover_tests(dlms_test)
+
+add_executable(pdu_test pdu_test.cpp ../main/pdu.c)
+target_link_libraries(pdu_test GTest::gtest_main)
+target_include_directories(pdu_test PRIVATE ../main .)
+gtest_discover_tests(pdu_test)

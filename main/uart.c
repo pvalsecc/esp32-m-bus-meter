@@ -1,8 +1,8 @@
 #include "uart.h"
 #include "dlms.h"
-#include "hdlc_fields.h"
 #include "hdlc_frame.h"
 #include "hdlc_packet.h"
+#include "pdu.h"
 #include <driver/gpio.h>
 #include <driver/uart.h>
 #include <esp_log.h>
@@ -44,6 +44,8 @@ static void dlms_frame_received(void *arg, const uint8_t *bytes, int size) {
         }
         printf("%02X", bytes[i]);
     }
+
+    pdu_decode(bytes, size);
 }
 
 _Noreturn void uart_task(void *arg) {
