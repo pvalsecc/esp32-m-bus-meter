@@ -89,3 +89,8 @@ TEST_F(HdlcFrameTest, ignoreStuffAtTheBegining) {
 
     EXPECT_EQ(frames, std::vector<std::vector<uint8_t>>({std::vector<uint8_t>({0x01, 0x02})}));
 }
+
+TEST_F(HdlcFrameTest, landisGyrIsStupid) {
+    hdlc_handle_bytes("7EA07DCEFF7E");
+    EXPECT_EQ(frames, std::vector<std::vector<uint8_t>>({std::vector<uint8_t>({0xA0, 0x7D, 0xCE, 0xFF})}));
+}
