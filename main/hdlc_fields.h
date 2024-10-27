@@ -7,8 +7,34 @@
 extern "C" {
 #endif
 
-bool hdlc_decode_type_length(uint8_t *bytes, int len, int *pos, uint8_t *outType, bool *outSegmentation,
+bool hdlc_decode_type_length(const uint8_t *bytes, int len, int *pos, uint8_t *outType, bool *outSegmentation,
                              uint16_t *outLength);
+
+bool hdlc_decode_address(const uint8_t *bytes, int len, int *pos, int *outAddressLen);
+
+typedef enum { INFORMATION_TRANSFER_COMMAND, SUPERVISORY_COMMAND, UNNUMBERED_COMMAND } ControlType;
+
+typedef struct {
+    uint8_t sendSequenceNumber;
+    uint8_t receiveSequenceNumber;
+} InformationTransferCommand;
+
+typedef struct {
+    bool finalBit;
+} UnnumberedCommand;
+
+typedef struct {
+    ControlType type;
+    bool finalBit;
+    union {
+        InformationTransferCommand informationTransferCommand;
+        UnnumberedCommand unnumberedCommand;
+    };
+} ControlField;
+
+bool hdlc_decode_control(const uint8_t *bytes, int len, int *pos, ControlField *controlfield);
+
+bool hdlc_decode_crc16(const uint8_t *bytes, int len, int *pos);
 
 #ifdef __cplusplus
 }

@@ -27,8 +27,8 @@ void hdlc_handle_byte(struct _hdlc_frame_state *state, uint8_t byte) {
     case WAIT_SYNC:
         if (byte == 0x7E) {
             // got a start byte
-            state->state = DATA;
             state->pos = 0;
+            state->state = DATA;
         }
         break;
     case DATA:
