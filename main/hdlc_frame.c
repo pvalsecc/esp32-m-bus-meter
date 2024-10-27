@@ -4,6 +4,8 @@
 
 static const char *TAG = "hdlc_frame";
 typedef enum { WAIT_SYNC, DATA, ESCAPE } State;
+static const int FLAG_BYTE = 0x7E;
+static const int ESCAPE_BYTE = 0x7D;
 
 typedef struct _hdlc_frame_state {
     State state;
@@ -25,14 +27,14 @@ hdlc_frame_state *hdlc_frame_init(hdlc_frame_cb cb, void *arg) {
 void hdlc_handle_byte(struct _hdlc_frame_state *state, uint8_t byte) {
     switch (state->state) {
     case WAIT_SYNC:
-        if (byte == 0x7E) {
+        if (byte == FLAG_BYTE) {
             // got a start byte
             state->pos = 0;
             state->state = DATA;
         }
         break;
     case DATA:
-        if (byte == 0x7E) {
+        if (byte == FLAG_BYTE) {
             // got the end
             if (state->pos > 0) {
                 state->cb(state->arg, state->buffer, state->pos);
@@ -43,7 +45,7 @@ void hdlc_handle_byte(struct _hdlc_frame_state *state, uint8_t byte) {
             ESP_LOGW(TAG, "Buffer overflow, ignoring a frame");
             state->pos = 0;
             state->state = WAIT_SYNC;
-        } else if (byte == 0x7D) {
+        } else if (byte == ESCAPE_BYTE) {
             state->state = ESCAPE;
         } else {
             state->buffer[state->pos] = byte;
@@ -52,12 +54,12 @@ void hdlc_handle_byte(struct _hdlc_frame_state *state, uint8_t byte) {
         break;
     case ESCAPE: {
         uint8_t actual = byte ^ 0x20; // bit 5 inverted
-        if (actual == 0x7E) {
+        if (actual == FLAG_BYTE || actual == ESCAPE_BYTE) {
             state->buffer[state->pos] = actual;
             state->pos++;
         } else {
             // Landis&Gyr are too stupid to respect the norm...
-            state->buffer[state->pos] = 0x7D;
+            state->buffer[state->pos] = ESCAPE_BYTE;
             state->pos++;
             if (state->pos > sizeof(state->buffer)) {
                 ESP_LOGW(TAG, "Buffer overflow, ignoring a frame");

@@ -30,3 +30,8 @@ add_executable(hdlc_packet_test hdlc_packet_test.cpp ../main/hdlc_packet.c ../ma
 target_link_libraries(hdlc_packet_test GTest::gtest_main)
 target_include_directories(hdlc_packet_test PRIVATE ../main .)
 gtest_discover_tests(hdlc_packet_test)
+
+add_executable(dlms_test dlms_test.cpp ../main/dlms.c)
+target_link_libraries(dlms_test GTest::gtest_main)
+target_include_directories(dlms_test PRIVATE ../main .)
+gtest_discover_tests(dlms_test)
