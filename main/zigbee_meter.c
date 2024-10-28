@@ -1,6 +1,6 @@
 #include "zigbee_meter.h"
 #include "esp_zigbee_core.h"
-#include "led.h"
+#include "zigbee_meter_values.h"
 #include "zigbee_utils.h"
 #include <esp_zigbee_attribute.h>
 #include <esp_zigbee_cluster.h>
@@ -105,6 +105,7 @@ esp_err_t zigbee_meter_attribute_handler(const esp_zb_zcl_set_attr_value_message
 }
 
 void zigbee_meter_update_active_power(int16_t powerWatts) {
+    ESP_LOGI(TAG, "Update the active power: %dW", powerWatts);
     esp_zb_lock_acquire(portMAX_DELAY);
     esp_zb_zcl_report_attr_cmd_t cmdReq = {.zcl_basic_cmd.src_endpoint = ELECTRICAL_MEASUREMENT_ENDPOINT_FIRST_ID,
                                            .address_mode = ESP_ZB_APS_ADDR_MODE_DST_ADDR_ENDP_NOT_PRESENT,
@@ -160,11 +161,13 @@ static void updateElectricalMeasurementUint16Attr(uint8_t endpoint, uint16_t att
 }
 
 void zigbee_meter_update_rms_current(int phase, uint16_t currentAmps) {
+    ESP_LOGI(TAG, "Update the RMS current on phase %d: %dA", phase + 1, currentAmps);
     updateElectricalMeasurementUint16Attr(ELECTRICAL_MEASUREMENT_ENDPOINT_FIRST_ID + phase,
                                           ESP_ZB_ZCL_ATTR_ELECTRICAL_MEASUREMENT_RMSCURRENT_ID, currentAmps);
 }
 
 void zigbee_meter_update_rms_voltage(int phase, uint16_t voltageVolts) {
+    ESP_LOGI(TAG, "Update the RMS voltage on phase %d: %dV", phase + 1, voltageVolts);
     updateElectricalMeasurementUint16Attr(ELECTRICAL_MEASUREMENT_ENDPOINT_FIRST_ID + phase,
                                           ESP_ZB_ZCL_ATTR_ELECTRICAL_MEASUREMENT_RMSVOLTAGE_ID, voltageVolts);
 }
@@ -197,9 +200,11 @@ static void updateMeteringUint64Attr(uint8_t endpoint, uint16_t attrId, uint64_t
 }
 
 void zigbee_meter_update_summation_received(uint64_t energy) {
+    ESP_LOGI(TAG, "Update the summation received: %lluKW/h", energy);
     updateMeteringUint64Attr(METERING_ENDPOINT_ID, ESP_ZB_ZCL_ATTR_METERING_CURRENT_SUMMATION_RECEIVED_ID, energy);
 }
 
 void zigbee_meter_update_summation_delivered(uint64_t energy) {
+    ESP_LOGI(TAG, "Update the summation delivered: %lluKW/h", energy);
     updateMeteringUint64Attr(METERING_ENDPOINT_ID, ESP_ZB_ZCL_ATTR_METERING_CURRENT_SUMMATION_DELIVERED_ID, energy);
 }

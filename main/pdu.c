@@ -1,7 +1,9 @@
 #include "pdu.h"
+#include "zigbee_meter_values.h"
 #include <esp_log.h>
+#include <memory.h>
 
-// 0F00 4B10AB0C 07E80A1B 0707232DFF800000 020D010D 02041200 28090600 08190900 FF0F0212 00000204 12002809 06000819
+// 0F 004B10AB 0C 07E80A1B0707232DFF800000 020D010D 02041200 28090600 08190900 FF0F0212 00000204 12002809 06000819
 // 0900FF0F 01120000 02041200 01090600 00600100 FF0F0212 00000204 12000309 06010001 0700FF0F 02120000 02041200 03090601
 // 00020700 FF0F0212 0000 02 04120003 09060101 010800FF 0F021200 00020412 00030906 01010208 00FF0F02 12000002 04120003
 // 09060100 1F0700FF 0F021200 00020412 00030906 01003307 00FF0F02 12000002 04120003 09060100 470700FF 0F021200 00020412
@@ -112,17 +114,17 @@
 //        <!--0.8.25.9.0.255-->
 //        <OctetString Value="0008190900FF" />
 //        <!--66681410-->
-//        <OctetString Value="3636363831343130" />
-//        <UInt32 Value="0000015A" />
-//        <UInt32 Value="00000000" />
-//        <UInt32 Value="003D1B04" />
-//        <UInt32 Value="00000000" />
-//        <UInt16 Value="0074" />
-//        <UInt16 Value="000E" />
-//        <UInt16 Value="0023" />
-//        <UInt16 Value="00EB" />
-//        <UInt16 Value="00EA" />
-//        <UInt16 Value="00EA" />
+//        <OctetString Value="3636363831343130" /> <!-- N° série fabricant -->
+//        <UInt32 Value="0000015A" /> <!-- Puissance active import -->
+//        <UInt32 Value="00000000" /> <!-- Puissance active export -->
+//        <UInt32 Value="003D1B04" /> <!-- Energie active import totale -->
+//        <UInt32 Value="00000000" /> <!-- Energie active export totale -->
+//        <UInt16 Value="0074" /> <!-- courant instantané L1 -->
+//        <UInt16 Value="000E" /> <!-- courant instantané L2 -->
+//        <UInt16 Value="0023" /> <!-- courant instantané L3 -->
+//        <UInt16 Value="00EB" /> <!-- tension instantanée L1 -->
+//        <UInt16 Value="00EA" /> <!-- tension instantanée L2 -->
+//        <UInt16 Value="00EA" /> <!-- tension instantanée L3 -->
 //      </Structure>
 //    </DataValue>
 //  </NotificationBody>
@@ -156,7 +158,42 @@ typedef enum {
     TIME_TYPE = 0x1B
 } Types;
 
-bool decode_item(const uint8_t *bytes, int size, int *pos) {
+static const uint8_t UNKNOWN_FIELD[] = {0, 8, 25, 9, 0, 255};
+static const uint8_t SERIAL_FIELD[] = {0, 0, 96, 1, 0, 255};
+static const uint8_t IMPORTED_ACTIVE_POWER_FIELD[] = {1, 0, 1, 7, 0, 255};
+static const uint8_t EXPORTED_ACTIVE_POWER_FIELD[] = {1, 0, 2, 7, 0, 255};
+static const uint8_t IMPORTED_ACTIVE_ENERGY_FIELD[] = {1, 1, 1, 8, 0, 255};
+static const uint8_t EXPORTED_ACTIVE_ENERGY_FIELD[] = {1, 1, 2, 8, 0, 255};
+static const uint8_t CURRENT_P1_FIELD[] = {1, 0, 31, 7, 0, 255};
+static const uint8_t CURRENT_P2_FIELD[] = {1, 0, 51, 7, 0, 255};
+static const uint8_t CURRENT_P3_FIELD[] = {1, 0, 71, 7, 0, 255};
+static const uint8_t VOLTAGE_P1_FIELD[] = {1, 0, 32, 7, 0, 255};
+static const uint8_t VOLTAGE_P2_FIELD[] = {1, 0, 52, 7, 0, 255};
+static const uint8_t VOLTAGE_P3_FIELD[] = {1, 0, 72, 7, 0, 255};
+
+typedef enum { ROOT, OUTER_STRUCT, FIRST_ARRAY, FIELD_DEF1, FIELD_DEF2, FIELD_DEF3, FIELD_DEF4, DATAS } State;
+
+typedef struct {
+    uint16_t field1;
+    uint8_t field2[6];
+    int8_t field3;
+    uint16_t field4;
+} FieldDef;
+
+#define MAX_FIELDS 20
+
+typedef struct {
+    State state;
+    FieldDef fields[MAX_FIELDS];
+    int curDefField;
+    int curUseField;
+} StateValues;
+
+static bool curFieldIs(const StateValues *statueValues, const uint8_t field[6]) {
+    return memcmp(statueValues->fields[statueValues->curUseField].field2, field, 6) == 0;
+}
+
+static bool decode_item(const uint8_t *bytes, int size, int *pos, StateValues *stateValues) {
     if (*pos + 1 > size) {
         return false;
     }
@@ -164,33 +201,77 @@ bool decode_item(const uint8_t *bytes, int size, int *pos) {
     ++*pos;
     switch (type) {
     case STRUCTURE_TYPE: {
-        ESP_LOGI(TAG, "structure {");
         if (*pos + 1 > size) {
             return false;
         }
         const uint8_t quantity = bytes[*pos];
         ++*pos;
+        State backState = stateValues->state;
+        bool def = false;
+        switch (stateValues->state) {
+        case ROOT:
+            stateValues->state = OUTER_STRUCT;
+            break;
+        case FIRST_ARRAY:
+            if (quantity != 4) {
+                ESP_LOGW(TAG, "Struct for a field def with an invalid number of fields: %d != 4", quantity);
+                return false;
+            }
+            def = true;
+            break;
+        default:
+            ESP_LOGW(TAG, "Received a struct while being in a weird state: %d", stateValues->state);
+            return false;
+        }
         for (uint8_t i = 0; i < quantity; ++i) {
-            if (!decode_item(bytes, size, pos)) {
+            if (def) {
+                stateValues->state = FIELD_DEF1 + i;
+            }
+            if (!decode_item(bytes, size, pos, stateValues)) {
                 return false;
             }
         }
-        ESP_LOGI(TAG, "}");
+        stateValues->state = backState;
         return true;
     }
     case ARRAY_TYPE: {
-        ESP_LOGI(TAG, "array {");
         if (*pos + 1 > size) {
             return false;
         }
         const uint8_t quantity = bytes[*pos];
         ++*pos;
+        State backState = stateValues->state;
+        bool fieldDefs = false;
+        switch (stateValues->state) {
+        case OUTER_STRUCT:
+            stateValues->state = FIRST_ARRAY;
+            fieldDefs = true;
+            break;
+        default:
+            ESP_LOGW(TAG, "Received an array while being in a weird state: %d", stateValues->state);
+            return false;
+        }
         for (uint8_t i = 0; i < quantity; ++i) {
-            if (!decode_item(bytes, size, pos)) {
+            if (fieldDefs && stateValues->curDefField >= MAX_FIELDS) {
+                ESP_LOGW(TAG, "Too many fields");
                 return false;
             }
+            if (!decode_item(bytes, size, pos, stateValues)) {
+                return false;
+            }
+            if (fieldDefs) {
+                if (stateValues->fields[stateValues->curDefField].field3 == 2) {
+                    stateValues->curDefField++;
+                } else {
+                    memset(&stateValues->fields[stateValues->curDefField], 0, sizeof(FieldDef));
+                }
+            }
         }
-        ESP_LOGI(TAG, "}");
+        if (fieldDefs) {
+            stateValues->state = DATAS;
+        } else {
+            stateValues->state = backState;
+        }
         return true;
     }
     case UINT32_TYPE: {
@@ -199,7 +280,37 @@ bool decode_item(const uint8_t *bytes, int size, int *pos) {
         }
         const uint32_t value = (bytes[*pos] << 24) | (bytes[*pos + 1] << 16) | (bytes[*pos + 2] << 8) | bytes[*pos + 3];
         *pos += 4;
-        ESP_LOGI(TAG, "value=%lu(uint32)", value);
+        switch (stateValues->state) {
+        case FIELD_DEF1:
+            stateValues->fields[stateValues->curDefField].field1 = value;
+            break;
+        case FIELD_DEF4:
+            stateValues->fields[stateValues->curDefField].field4 = value;
+            break;
+        case DATAS:
+            if (curFieldIs(stateValues, IMPORTED_ACTIVE_POWER_FIELD)) {
+                zigbee_meter_update_active_power(value);
+            } else if (curFieldIs(stateValues, EXPORTED_ACTIVE_POWER_FIELD)) {
+                if (value > 0) {
+                    zigbee_meter_update_active_power(-value);
+                }
+            } else if (curFieldIs(stateValues, IMPORTED_ACTIVE_ENERGY_FIELD)) {
+                zigbee_meter_update_summation_received(value);
+            } else if (curFieldIs(stateValues, EXPORTED_ACTIVE_ENERGY_FIELD)) {
+                zigbee_meter_update_summation_delivered(value);
+            } else {
+                const FieldDef *curField = stateValues->fields + stateValues->curUseField;
+                ESP_LOGW(TAG, "Wrong uint32 type for field: %d.%d.%d.%d.%d.%d", curField->field2[0],
+                         curField->field2[1], curField->field2[2], curField->field2[3], curField->field2[4],
+                         curField->field2[5]);
+                return false;
+            }
+            stateValues->curUseField++;
+            break;
+        default:
+            ESP_LOGW(TAG, "Received an uint32 while being in a weird state: %d", stateValues->state);
+            return false;
+        }
         return true;
     }
     case UINT16_TYPE: {
@@ -208,16 +319,39 @@ bool decode_item(const uint8_t *bytes, int size, int *pos) {
         }
         const uint16_t value = bytes[*pos] << 8 | bytes[*pos + 1];
         *pos += 2;
-        ESP_LOGI(TAG, "value=%u(uint16)", value);
-        return true;
-    }
-    case UINT8_TYPE: {
-        if (*pos + 1 > size) {
+        switch (stateValues->state) {
+        case FIELD_DEF1:
+            stateValues->fields[stateValues->curDefField].field1 = value;
+            break;
+        case FIELD_DEF4:
+            stateValues->fields[stateValues->curDefField].field4 = value;
+            break;
+        case DATAS:
+            if (curFieldIs(stateValues, CURRENT_P1_FIELD)) {
+                zigbee_meter_update_rms_current(0, value);
+            } else if (curFieldIs(stateValues, CURRENT_P2_FIELD)) {
+                zigbee_meter_update_rms_current(1, value);
+            } else if (curFieldIs(stateValues, CURRENT_P3_FIELD)) {
+                zigbee_meter_update_rms_current(2, value);
+            } else if (curFieldIs(stateValues, VOLTAGE_P1_FIELD)) {
+                zigbee_meter_update_rms_voltage(0, value);
+            } else if (curFieldIs(stateValues, VOLTAGE_P2_FIELD)) {
+                zigbee_meter_update_rms_voltage(1, value);
+            } else if (curFieldIs(stateValues, VOLTAGE_P3_FIELD)) {
+                zigbee_meter_update_rms_voltage(2, value);
+            } else {
+                const FieldDef *curField = stateValues->fields + stateValues->curUseField;
+                ESP_LOGW(TAG, "Wrong uint16 type for field: %d.%d.%d.%d.%d.%d", curField->field2[0],
+                         curField->field2[1], curField->field2[2], curField->field2[3], curField->field2[4],
+                         curField->field2[5]);
+                return false;
+            }
+            stateValues->curUseField++;
+            break;
+        default:
+            ESP_LOGW(TAG, "Received an uint16 while being in a weird state: %d", stateValues->state);
             return false;
         }
-        const uint8_t value = bytes[*pos];
-        ++*pos;
-        ESP_LOGI(TAG, "value=%u(uint8)", value);
         return true;
     }
     case INT8_TYPE: {
@@ -226,7 +360,14 @@ bool decode_item(const uint8_t *bytes, int size, int *pos) {
         }
         const int8_t value = (int8_t)bytes[*pos];
         ++*pos;
-        ESP_LOGI(TAG, "value=%d(int8)", value);
+        switch (stateValues->state) {
+        case FIELD_DEF3:
+            stateValues->fields[stateValues->curDefField].field3 = value;
+            break;
+        default:
+            ESP_LOGW(TAG, "Received an uint8 while being in a weird state: %d", stateValues->state);
+            return false;
+        }
         return true;
     }
     case OCTET_STRING_TYPE: {
@@ -238,8 +379,28 @@ bool decode_item(const uint8_t *bytes, int size, int *pos) {
         if (*pos + stringSize > size) {
             return false;
         }
+        switch (stateValues->state) {
+        case FIELD_DEF2:
+            memcpy(stateValues->fields[stateValues->curDefField].field2, bytes + *pos, 6);
+            break;
+        case DATAS:
+            if (curFieldIs(stateValues, UNKNOWN_FIELD) || curFieldIs(stateValues, SERIAL_FIELD)) {
+                // ignored fields
+            } else {
+                const FieldDef *curField = stateValues->fields + stateValues->curUseField;
+                ESP_LOGW(TAG, "Wrong octetString type for field: %d.%d.%d.%d.%d.%d", curField->field2[0],
+                         curField->field2[1], curField->field2[2], curField->field2[3], curField->field2[4],
+                         curField->field2[5]);
+                return false;
+            }
+            stateValues->curUseField++;
+            break;
+        default:
+            ESP_LOGW(TAG, "Received an uint16 while being in a weird state: %d", stateValues->state);
+            return false;
+        }
+
         *pos += stringSize;
-        ESP_LOGI(TAG, "value=...(octetString%d)", stringSize);
         return true;
     }
     default:
@@ -255,7 +416,8 @@ bool pdu_decode(const uint8_t *bytes, int size) {
     pos += 1;  // unknown crap
     pos += 12; // DateTime
 
-    if (!decode_item(bytes, size, &pos)) {
+    StateValues stateValues = {};
+    if (!decode_item(bytes, size, &pos, &stateValues)) {
         return false;
     }
     return pos == size;

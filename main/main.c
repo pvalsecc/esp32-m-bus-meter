@@ -2,7 +2,7 @@
 #include "led.h"
 #include "uart.h"
 #include "zigbee.h"
-#include "zigbee_meter.h"
+#include "zigbee_meter_values.h"
 #include <esp_log.h>
 #include <hal/efuse_hal.h>
 #include <nvs_flash.h>
