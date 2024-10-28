@@ -24,6 +24,16 @@ static const uart_config_t uart_config = {
 static void hdlc_frame_received(void *arg, const uint8_t *bytes, int size) {
     struct dlms_state *dlmsState = (struct dlms_state *)arg;
     Information information = hdlc_packet_decode(bytes, size);
+    if (information.size == 0) {
+        ESP_LOGW(TAG, "Failed parsing this HDLC frame:");
+        for (int i = 0; i < size; ++i) {
+            if (i % 4 == 0) {
+                printf(" ");
+            }
+            printf("%02X", bytes[i]);
+        }
+        printf("\n");
+    }
     if (!dlms_decode(dlmsState, information.bytes, information.size)) {
         ESP_LOGW(TAG, "Failed parsing this HDLC information:");
         for (int i = 0; i < information.size; ++i) {
