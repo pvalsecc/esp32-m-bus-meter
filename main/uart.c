@@ -33,6 +33,7 @@ static void hdlc_frame_received(void *arg, const uint8_t *bytes, int size) {
             printf("%02X", bytes[i]);
         }
         printf("\n");
+        return;
     }
     if (!dlms_decode(dlmsState, information.bytes, information.size)) {
         ESP_LOGW(TAG, "Failed parsing this HDLC information:");

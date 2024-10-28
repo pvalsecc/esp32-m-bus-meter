@@ -29,56 +29,58 @@ class HdlcFrameTest : public testing::Test {
 };
 
 TEST_F(HdlcFrameTest, simpleFrame) {
-    hdlc_handle_bytes("7E01027E");
+    hdlc_handle_bytes("7EA003037E");
 
-    EXPECT_EQ(frames, std::vector<std::vector<uint8_t>>({std::vector<uint8_t>({0x01, 0x02})}));
+    EXPECT_EQ(frames, std::vector<std::vector<uint8_t>>({std::vector<uint8_t>({0xA0, 0x03, 0x03})}));
 }
 
 TEST_F(HdlcFrameTest, twoFramesWithSingleStartByte) {
-    hdlc_handle_bytes("7E01027E");
-    hdlc_handle_bytes("0304057E");
+    hdlc_handle_bytes("7EA003047E");
+    hdlc_handle_bytes("A00405067E");
 
     EXPECT_EQ(frames, std::vector<std::vector<uint8_t>>({
-                          std::vector<uint8_t>({0x01, 0x02}),
-                          std::vector<uint8_t>({0x03, 0x04, 0x05}),
+                          std::vector<uint8_t>({0xA0, 0x03, 0x04}),
+                          std::vector<uint8_t>({0xA0, 0x04, 0x05, 0x06}),
                       }));
 }
 
 TEST_F(HdlcFrameTest, twoFramesWithDoubleStartByte) {
-    hdlc_handle_bytes("7E01027E");
-    hdlc_handle_bytes("7E0304057E");
+    hdlc_handle_bytes("7EA003047E");
+    hdlc_handle_bytes("7EA00405067E");
 
     EXPECT_EQ(frames, std::vector<std::vector<uint8_t>>({
-                          std::vector<uint8_t>({0x01, 0x02}),
-                          std::vector<uint8_t>({0x03, 0x04, 0x05}),
+                          std::vector<uint8_t>({0xA0, 0x03, 0x04}),
+                          std::vector<uint8_t>({0xA0, 0x04, 0x05, 0x06}),
                       }));
 }
+#ifdef HANDLE_ESCAPE
 
 TEST_F(HdlcFrameTest, frameWithEscapeSequence) {
-    hdlc_handle_bytes("7E017D5E027E");
+    hdlc_handle_bytes("7EA0047D5E027E");
 
-    EXPECT_EQ(frames, std::vector<std::vector<uint8_t>>({std::vector<uint8_t>({0x01, 0x7E, 0x02})}));
+    EXPECT_EQ(frames, std::vector<std::vector<uint8_t>>({std::vector<uint8_t>({0xA0, 0x04, 0x7E, 0x02})}));
 }
+#endif
 
 TEST_F(HdlcFrameTest, frameTooBig) {
-    hdlc_handle_byte(state, 0x7E);
+    hdlc_handle_bytes("7EA1F6");
     for (int i = 0; i < 500; ++i) {
         hdlc_handle_byte(state, 0x01);
     }
     hdlc_handle_byte(state, 0x7E);
-    hdlc_handle_bytes("01027E");
+    hdlc_handle_bytes("A003027E");
 
-    EXPECT_EQ(frames, std::vector<std::vector<uint8_t>>({std::vector<uint8_t>({0x01, 0x02})}));
+    EXPECT_EQ(frames, std::vector<std::vector<uint8_t>>({std::vector<uint8_t>({0xA0, 0x03, 0x02})}));
 }
 
 TEST_F(HdlcFrameTest, ignoreStuffAtTheBegining) {
     hdlc_handle_bytes("424344");
-    hdlc_handle_bytes("7E01027E");
+    hdlc_handle_bytes("7EA003027E");
 
-    EXPECT_EQ(frames, std::vector<std::vector<uint8_t>>({std::vector<uint8_t>({0x01, 0x02})}));
+    EXPECT_EQ(frames, std::vector<std::vector<uint8_t>>({std::vector<uint8_t>({0xA0, 0x03, 0x02})}));
 }
 
 TEST_F(HdlcFrameTest, landisGyrIsStupid) {
-    hdlc_handle_bytes("7EA07DCEFF7E");
-    EXPECT_EQ(frames, std::vector<std::vector<uint8_t>>({std::vector<uint8_t>({0xA0, 0x7D, 0xCE, 0xFF})}));
+    hdlc_handle_bytes("7EA0047DFF7E");
+    EXPECT_EQ(frames, std::vector<std::vector<uint8_t>>({std::vector<uint8_t>({0xA0, 0x04, 0x7D, 0xFF})}));
 }

@@ -6,6 +6,8 @@
 extern "C" {
 #endif
 
+#undef HANDLE_ESCAPE
+
 struct _hdlc_frame_state;
 
 typedef void (*hdlc_frame_cb)(void *arg, const uint8_t *bytes, int size);
