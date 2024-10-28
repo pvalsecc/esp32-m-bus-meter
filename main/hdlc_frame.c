@@ -13,7 +13,9 @@ typedef enum {
 #endif
 } State;
 static const int FLAG_BYTE = 0x7E;
+#ifdef HANDLE_ESCAPE
 static const int ESCAPE_BYTE = 0x7D;
+#endif
 
 typedef struct _hdlc_frame_state {
     State state;
