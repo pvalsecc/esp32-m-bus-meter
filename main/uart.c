@@ -24,7 +24,7 @@ static const uart_config_t uart_config = {
 static void hdlc_frame_received(void *arg, const Buffer *buffer) {
     struct dlms_state *dlmsState = (struct dlms_state *)arg;
     Buffer information;
-    if (hdlc_packet_decode(buffer, &information)) {
+    if (!hdlc_packet_decode(buffer, &information)) {
         ESP_LOGW(TAG, "Failed parsing this HDLC frame:");
         buffer_dump(buffer);
         return;
@@ -60,5 +60,5 @@ void uart_init() {
     ESP_ERROR_CHECK(uart_set_pin(UART_PORT, UART_TX_PIN, UART_RX_PIN, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
     ESP_ERROR_CHECK(uart_driver_install(UART_PORT, UART_BUF_SIZE * 2, 0, 0, NULL, 0));
 
-    xTaskCreate(uart_task, "uart_task", 4096, NULL, 10, NULL);
+    xTaskCreate(uart_task, "uart_task", 8192, NULL, 10, NULL);
 }
