@@ -161,6 +161,11 @@ esp_err_t zigbee_meter_attribute_handler(const esp_zb_zcl_set_attr_value_message
 }
 
 void zigbee_meter_update_active_power(int16_t powerWatts) {
+    static int16_t prev = 0;
+    if (prev == powerWatts) {
+        return;
+    }
+    prev = powerWatts;
     ESP_LOGI(TAG, "Update the active power: %dW", powerWatts);
     esp_zb_lock_acquire(portMAX_DELAY);
     esp_zb_zcl_report_attr_cmd_t cmdReq = {.zcl_basic_cmd.src_endpoint = ELECTRICAL_MEASUREMENT_ENDPOINT_FIRST_ID,
@@ -240,7 +245,11 @@ static void updateElectricalMeasurementUint16Attr(uint8_t endpoint, uint16_t att
 }
 
 void zigbee_meter_update_rms_current(int phase, uint16_t currentAmps) {
-    // TODO: do we get 1/100 Amps from the meter?
+    static uint16_t prev[3] = {};
+    if (prev[phase] == currentAmps) {
+        return;
+    }
+    prev[phase] = currentAmps;
     ESP_LOGI(TAG, "Update the RMS current on phase %d: %dA", phase + 1, currentAmps);
     updateElectricalMeasurementUint16Attr(ELECTRICAL_MEASUREMENT_ENDPOINT_FIRST_ID + phase,
                                           ESP_ZB_ZCL_ATTR_ELECTRICAL_MEASUREMENT_RMSCURRENT_ID, currentAmps);
@@ -248,6 +257,11 @@ void zigbee_meter_update_rms_current(int phase, uint16_t currentAmps) {
 }
 
 void zigbee_meter_update_rms_voltage(int phase, uint16_t voltageVolts) {
+    static uint16_t prev[3] = {};
+    if (prev[phase] == voltageVolts) {
+        return;
+    }
+    prev[phase] = voltageVolts;
     ESP_LOGI(TAG, "Update the RMS voltage on phase %d: %dV", phase + 1, voltageVolts);
     updateElectricalMeasurementUint16Attr(ELECTRICAL_MEASUREMENT_ENDPOINT_FIRST_ID + phase,
                                           ESP_ZB_ZCL_ATTR_ELECTRICAL_MEASUREMENT_RMSVOLTAGE_ID, voltageVolts);
@@ -281,18 +295,33 @@ static void updateMeteringUint64Attr(uint8_t endpoint, uint16_t attrId, uint64_t
 }
 
 void zigbee_meter_update_summation_received(uint64_t energy) {
+    static uint64_t prev = {};
+    if (prev == energy) {
+        return;
+    }
+    prev = energy;
     ESP_LOGI(TAG, "Update the summation received: %lluW/h", energy);
     updateMeteringUint64Attr(METERING_ENDPOINT_ID, ESP_ZB_ZCL_ATTR_METERING_CURRENT_SUMMATION_RECEIVED_ID, energy);
     ESP_LOGI(TAG, "Done updating the summation received");
 }
 
 void zigbee_meter_update_summation_delivered(uint64_t energy) {
+    static uint64_t prev = {};
+    if (prev == energy) {
+        return;
+    }
+    prev = energy;
     ESP_LOGI(TAG, "Update the summation delivered: %lluW/h", energy);
     updateMeteringUint64Attr(METERING_ENDPOINT_ID, ESP_ZB_ZCL_ATTR_METERING_CURRENT_SUMMATION_DELIVERED_ID, energy);
     ESP_LOGI(TAG, "Done updating the summation delivered");
 }
 
 void zigbee_meter_update_tier_summation_received(int tier, uint64_t energy) {
+    static uint64_t prev[2] = {};
+    if (prev[tier] == energy) {
+        return;
+    }
+    prev[tier] = energy;
     ESP_LOGI(TAG, "Update the summation received tier %d: %lluW/h", tier + 1, energy);
     updateMeteringUint64Attr(METERING_ENDPOINT_ID,
                              ESP_ZB_ZCL_ATTR_METERING_CURRENT_TIER1_SUMMATION_RECEIVED_ID + 2 * tier, energy);
