@@ -7,12 +7,9 @@
 extern "C" {
 #endif
 
-typedef struct {
-    const uint8_t *bytes;
-    int size;
-} Information;
+struct Buffer;
 
-Information hdlc_packet_decode(const uint8_t *bytes, int size);
+bool hdlc_packet_decode(const struct Buffer *packet, struct Buffer *information);
 
 #ifdef __cplusplus
 }

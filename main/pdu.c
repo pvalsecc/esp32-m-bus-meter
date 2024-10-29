@@ -1,4 +1,6 @@
 #include "pdu.h"
+#include "buffer.h"
+#include "stream.h"
 #include "zigbee_meter_values.h"
 #include <esp_log.h>
 #include <memory.h>
@@ -73,19 +75,17 @@ static bool curFieldIs(const StateValues *statueValues, const uint8_t field[6]) 
     return memcmp(statueValues->fields[statueValues->curUseField].field2, field, 6) == 0;
 }
 
-static bool decode_item(const uint8_t *bytes, int size, int *pos, StateValues *stateValues) {
-    if (*pos + 1 > size) {
+static bool decode_item(Stream *stream, StateValues *stateValues) {
+    uint8_t type;
+    if (!stream_getu8(stream, &type)) {
         return false;
     }
-    uint8_t type = bytes[*pos];
-    ++*pos;
     switch (type) {
     case STRUCTURE_TYPE: {
-        if (*pos + 1 > size) {
+        uint8_t quantity;
+        if (!stream_getu8(stream, &quantity)) {
             return false;
         }
-        const uint8_t quantity = bytes[*pos];
-        ++*pos;
         State backState = stateValues->state;
         bool def = false;
         switch (stateValues->state) {
@@ -107,7 +107,7 @@ static bool decode_item(const uint8_t *bytes, int size, int *pos, StateValues *s
             if (def) {
                 stateValues->state = FIELD_DEF1 + i;
             }
-            if (!decode_item(bytes, size, pos, stateValues)) {
+            if (!decode_item(stream, stateValues)) {
                 return false;
             }
         }
@@ -115,11 +115,10 @@ static bool decode_item(const uint8_t *bytes, int size, int *pos, StateValues *s
         return true;
     }
     case ARRAY_TYPE: {
-        if (*pos + 1 > size) {
+        uint8_t quantity;
+        if (!stream_getu8(stream, &quantity)) {
             return false;
         }
-        const uint8_t quantity = bytes[*pos];
-        ++*pos;
         State backState = stateValues->state;
         bool fieldDefs = false;
         switch (stateValues->state) {
@@ -136,7 +135,7 @@ static bool decode_item(const uint8_t *bytes, int size, int *pos, StateValues *s
                 ESP_LOGW(TAG, "Too many fields");
                 return false;
             }
-            if (!decode_item(bytes, size, pos, stateValues)) {
+            if (!decode_item(stream, stateValues)) {
                 return false;
             }
             if (fieldDefs) {
@@ -155,11 +154,10 @@ static bool decode_item(const uint8_t *bytes, int size, int *pos, StateValues *s
         return true;
     }
     case UINT32_TYPE: {
-        if (*pos + 4 > size) {
+        uint32_t value;
+        if (!stream_getu32_be(stream, &value)) {
             return false;
         }
-        const uint32_t value = (bytes[*pos] << 24) | (bytes[*pos + 1] << 16) | (bytes[*pos + 2] << 8) | bytes[*pos + 3];
-        *pos += 4;
         switch (stateValues->state) {
         case FIELD_DEF1:
             stateValues->fields[stateValues->curDefField].field1 = value;
@@ -199,11 +197,10 @@ static bool decode_item(const uint8_t *bytes, int size, int *pos, StateValues *s
         return true;
     }
     case UINT16_TYPE: {
-        if (*pos + 2 > size) {
+        uint16_t value;
+        if (!stream_getu16_be(stream, &value)) {
             return false;
         }
-        const uint16_t value = bytes[*pos] << 8 | bytes[*pos + 1];
-        *pos += 2;
         switch (stateValues->state) {
         case FIELD_DEF1:
             stateValues->fields[stateValues->curDefField].field1 = value;
@@ -240,11 +237,10 @@ static bool decode_item(const uint8_t *bytes, int size, int *pos, StateValues *s
         return true;
     }
     case INT8_TYPE: {
-        if (*pos + 1 > size) {
+        int8_t value;
+        if (!stream_get8(stream, &value)) {
             return false;
         }
-        const int8_t value = (int8_t)bytes[*pos];
-        ++*pos;
         switch (stateValues->state) {
         case FIELD_DEF3:
             stateValues->fields[stateValues->curDefField].field3 = value;
@@ -256,22 +252,24 @@ static bool decode_item(const uint8_t *bytes, int size, int *pos, StateValues *s
         return true;
     }
     case OCTET_STRING_TYPE: {
-        if (*pos + 1 > size) {
-            return false;
-        }
-        const uint8_t stringSize = bytes[*pos];
-        ++*pos;
-        if (*pos + stringSize > size) {
+        uint8_t stringSize;
+        if (!stream_getu8(stream, &stringSize)) {
             return false;
         }
         switch (stateValues->state) {
         case FIELD_DEF2:
-            memcpy(stateValues->fields[stateValues->curDefField].field2, bytes + *pos, 6);
+            if (stringSize != 6) {
+                return false;
+            }
+            if (!stream_get(stream, stateValues->fields[stateValues->curDefField].field2, stringSize)) {
+                return false;
+            }
             break;
         case DATAS:
             if (curFieldIs(stateValues, UNKNOWN_FIELD1) || curFieldIs(stateValues, SERIAL_FIELD) ||
                 curFieldIs(stateValues, UNKNOWN_FIELD2)) {
                 // ignored fields
+                stream_skip(stream, stringSize);
             } else {
                 const FieldDef *curField = stateValues->fields + stateValues->curUseField;
                 ESP_LOGW(TAG, "Wrong octetString type for field: %d.%d.%d.%d.%d.%d", curField->field2[0],
@@ -286,7 +284,6 @@ static bool decode_item(const uint8_t *bytes, int size, int *pos, StateValues *s
             return false;
         }
 
-        *pos += stringSize;
         return true;
     }
     default:
@@ -295,16 +292,17 @@ static bool decode_item(const uint8_t *bytes, int size, int *pos, StateValues *s
     }
 }
 
-bool pdu_decode(const uint8_t *bytes, int size) {
-    int pos = 0;
-    pos += 1;  // unknown crap
-    pos += 4;  // LongInvokeIdAndPriority
-    pos += 1;  // unknown crap
-    pos += 12; // DateTime
+bool pdu_decode(const Buffer *buffer) {
+    Stream stream;
+    stream_reset(&stream, buffer);
+    stream_skip(&stream, 1);  // unknown crap
+    stream_skip(&stream, 4);  // LongInvokeIdAndPriority
+    stream_skip(&stream, 1);  // unknown crap
+    stream_skip(&stream, 12); // DateTime
 
     StateValues stateValues = {};
-    if (!decode_item(bytes, size, &pos, &stateValues)) {
+    if (!decode_item(&stream, &stateValues)) {
         return false;
     }
-    return pos == size;
+    return stream_remains(&stream) == 0;
 }

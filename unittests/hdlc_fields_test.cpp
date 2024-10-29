@@ -1,99 +1,114 @@
+#include "hex_utils.h"
 #include <gtest/gtest.h>
 #include <hdlc_fields.h>
+#include <stream.h>
 
 TEST(HdlcFields, type0) {
-    uint8_t bytes[] = {0x42};
-    int pos = 0;
+    const auto buffer = hex2buffer("42");
+    Stream stream;
+    stream_reset(&stream, &buffer);
     uint8_t outType;
     bool outSegmentation = true;
     uint16_t outLen;
-    ASSERT_TRUE(hdlc_decode_type_length(bytes, sizeof(bytes), &pos, &outType, &outSegmentation, &outLen));
+    ASSERT_TRUE(hdlc_decode_type_length(&stream, &outType, &outSegmentation, &outLen));
     EXPECT_EQ(outType, 0);
     EXPECT_FALSE(outSegmentation);
     EXPECT_EQ(outLen, 0x42);
-    EXPECT_EQ(pos, sizeof(bytes));
+    EXPECT_EQ(stream_remains(&stream), 0);
 }
 
 TEST(HdlcFields, type1) {
-    uint8_t bytes[] = {0x81, 0x01};
-    int pos = 0;
+    const auto buffer = hex2buffer("8101");
+    Stream stream;
+    stream_reset(&stream, &buffer);
     uint8_t outType;
     bool outSegmentation = true;
     uint16_t outLen;
-    ASSERT_TRUE(hdlc_decode_type_length(bytes, sizeof(bytes), &pos, &outType, &outSegmentation, &outLen));
+    ASSERT_TRUE(hdlc_decode_type_length(&stream, &outType, &outSegmentation, &outLen));
     EXPECT_EQ(outType, 1);
     EXPECT_FALSE(outSegmentation);
     EXPECT_EQ(outLen, 0x101);
-    EXPECT_EQ(pos, sizeof(bytes));
+    EXPECT_EQ(stream_remains(&stream), 0);
 }
 
 TEST(HdlcFields, type1WithSegmentation) {
-    uint8_t bytes[] = {0x88, 0x05};
-    int pos = 0;
+    const auto buffer = hex2buffer("8805");
+    Stream stream;
+    stream_reset(&stream, &buffer);
     uint8_t outType;
     bool outSegmentation = false;
     uint16_t outLen;
-    ASSERT_TRUE(hdlc_decode_type_length(bytes, sizeof(bytes), &pos, &outType, &outSegmentation, &outLen));
+    ASSERT_TRUE(hdlc_decode_type_length(&stream, &outType, &outSegmentation, &outLen));
     EXPECT_EQ(outType, 1);
     EXPECT_TRUE(outSegmentation);
     EXPECT_EQ(outLen, 0x005);
-    EXPECT_EQ(pos, sizeof(bytes));
+    EXPECT_EQ(stream_remains(&stream), 0);
 }
 
 TEST(HdlcFields, type3) {
-    uint8_t bytes[] = {0xA3, 0x21};
-    int pos = 0;
+    const auto buffer = hex2buffer("A321");
+    Stream stream;
+    stream_reset(&stream, &buffer);
     uint8_t outType;
     bool outSegmentation = true;
     uint16_t outLen;
-    ASSERT_TRUE(hdlc_decode_type_length(bytes, sizeof(bytes), &pos, &outType, &outSegmentation, &outLen));
+    ASSERT_TRUE(hdlc_decode_type_length(&stream, &outType, &outSegmentation, &outLen));
     EXPECT_EQ(outType, 3);
     EXPECT_FALSE(outSegmentation);
     EXPECT_EQ(outLen, 0x321);
-    EXPECT_EQ(pos, sizeof(bytes));
+    EXPECT_EQ(stream_remains(&stream), 0);
 }
 
 TEST(HdlcFields, address) {
-    uint8_t bytes[] = {0xCE, 0xFF, 0x03, 0x13, 0x90, 0xF1, 0xE0};
-    int pos = 0;
+    const auto buffer = hex2buffer("CEFF031390F1E0");
+    Stream stream;
+    stream_reset(&stream, &buffer);
     int outAddressLen = 0;
 
     // decode first address
-    ASSERT_TRUE(hdlc_decode_address(bytes, sizeof(bytes), &pos, &outAddressLen));
+    ASSERT_TRUE(hdlc_decode_address(&stream, &outAddressLen));
     EXPECT_EQ(outAddressLen, 2);
-    EXPECT_EQ(pos, 2);
+    EXPECT_EQ(stream.pos, 2);
 
     // decode second address
-    ASSERT_TRUE(hdlc_decode_address(bytes, sizeof(bytes), &pos, &outAddressLen));
+    ASSERT_TRUE(hdlc_decode_address(&stream, &outAddressLen));
     EXPECT_EQ(outAddressLen, 1);
-    EXPECT_EQ(pos, 3);
+    EXPECT_EQ(stream.pos, 3);
 }
 
 TEST(HdlcFields, control1) {
-    uint8_t bytes[] = {0x13, 0x90, 0xF1, 0xE0};
-    int pos = 0;
+    const auto buffer = hex2buffer("1390F1E0");
+    Stream stream;
+    stream_reset(&stream, &buffer);
     ControlField controlField = {};
 
-    ASSERT_TRUE(hdlc_decode_control(bytes, sizeof(bytes), &pos, &controlField));
-    EXPECT_EQ(pos, 1);
+    ASSERT_TRUE(hdlc_decode_control(&stream, &controlField));
+    EXPECT_EQ(stream.pos, 1);
     EXPECT_EQ(controlField.type, UNNUMBERED_COMMAND);
     EXPECT_EQ(controlField.finalBit, true);
 }
 
 TEST(HdlcFields, crc16a) {
-    uint8_t bytes[] = {0xA0, 0x6D, 0xCE, 0xFF, 0x03, 0x13, 0x90, 0xF1};
-    int pos = sizeof(bytes) - 2;
-    ASSERT_TRUE(hdlc_decode_crc16(bytes, sizeof(bytes), &pos));
+    const auto buffer = hex2buffer("A06DCEFF031390F1");
+    Stream stream;
+    stream_reset(&stream, &buffer);
+    stream_skip(&stream, 6);
+
+    ASSERT_TRUE(hdlc_decode_crc16(&stream));
 }
 
 TEST(HdlcFields, crc16b) {
-    uint8_t bytes[] = {0xA0, 0x84, 0xCE, 0xFF, 0x03, 0x13, 0x12, 0x8B};
-    int pos = sizeof(bytes) - 2;
-    ASSERT_TRUE(hdlc_decode_crc16(bytes, sizeof(bytes), &pos));
+    const auto buffer = hex2buffer("A084CEFF0313128B}");
+    Stream stream;
+    stream_reset(&stream, &buffer);
+    stream_skip(&stream, 6);
+    ASSERT_TRUE(hdlc_decode_crc16(&stream));
 }
 
 TEST(HdlcFields, crc16c) {
-    uint8_t bytes[] = {0xA0, 0x7D, 0xCE, 0xFF, 0x03, 0x13, 0xD0, 0x45};
-    int pos = sizeof(bytes) - 2;
-    ASSERT_TRUE(hdlc_decode_crc16(bytes, sizeof(bytes), &pos));
+    const auto buffer = hex2buffer("A07DCEFF0313D045}");
+    Stream stream;
+    stream_reset(&stream, &buffer);
+    stream_skip(&stream, 6);
+    ASSERT_TRUE(hdlc_decode_crc16(&stream));
 }

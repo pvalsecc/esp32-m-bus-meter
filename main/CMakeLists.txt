@@ -13,4 +13,6 @@ idf_component_register(
         hdlc_packet.c
         dlms.c
         pdu.c
+        buffer.c
+        stream.c
     INCLUDE_DIRS ".")

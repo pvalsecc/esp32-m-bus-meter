@@ -7,10 +7,11 @@
 extern "C" {
 #endif
 
-bool hdlc_decode_type_length(const uint8_t *bytes, int len, int *pos, uint8_t *outType, bool *outSegmentation,
-                             uint16_t *outLength);
+struct Stream;
 
-bool hdlc_decode_address(const uint8_t *bytes, int len, int *pos, int *outAddressLen);
+bool hdlc_decode_type_length(struct Stream *stream, uint8_t *outType, bool *outSegmentation, uint16_t *outLength);
+
+bool hdlc_decode_address(struct Stream *stream, int *outAddressLen);
 
 typedef enum { INFORMATION_TRANSFER_COMMAND, SUPERVISORY_COMMAND, UNNUMBERED_COMMAND } ControlType;
 
@@ -32,9 +33,9 @@ typedef struct {
     };
 } ControlField;
 
-bool hdlc_decode_control(const uint8_t *bytes, int len, int *pos, ControlField *controlfield);
+bool hdlc_decode_control(struct Stream *stream, ControlField *controlfield);
 
-bool hdlc_decode_crc16(const uint8_t *bytes, int len, int *pos);
+bool hdlc_decode_crc16(struct Stream *stream);
 
 #ifdef __cplusplus
 }

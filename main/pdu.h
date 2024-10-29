@@ -7,7 +7,9 @@
 extern "C" {
 #endif
 
-bool pdu_decode(const uint8_t *bytes, int size);
+struct Buffer;
+
+bool pdu_decode(const struct Buffer *buffer);
 
 #ifdef __cplusplus
 }

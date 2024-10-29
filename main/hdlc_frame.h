@@ -8,13 +8,14 @@ extern "C" {
 
 #undef HANDLE_ESCAPE
 
-struct _hdlc_frame_state;
+struct hdlc_frame_state;
+struct Buffer;
 
-typedef void (*hdlc_frame_cb)(void *arg, const uint8_t *bytes, int size);
+typedef void (*hdlc_frame_cb)(void *arg, const struct Buffer *buffer);
 
-struct _hdlc_frame_state *hdlc_frame_init(hdlc_frame_cb cb, void *arg);
+struct hdlc_frame_state *hdlc_frame_init(hdlc_frame_cb cb, void *arg);
 
-void hdlc_handle_byte(struct _hdlc_frame_state *state, uint8_t byte);
+void hdlc_handle_byte(struct hdlc_frame_state *state, uint8_t byte);
 
 #ifdef __cplusplus
 }

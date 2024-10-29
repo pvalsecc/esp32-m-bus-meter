@@ -7,13 +7,13 @@ class HdlcFrameTest : public testing::Test {
     void SetUp() override { state = hdlc_frame_init(&staticCb, this); }
 
   public:
-    static void staticCb(void *arg, const uint8_t *buffer, int len) {
+    static void staticCb(void *arg, const Buffer *buffer) {
         auto self = reinterpret_cast<HdlcFrameTest *>(arg);
-        self->cb(buffer, len);
+        self->cb(buffer);
     }
 
-    void cb(const uint8_t *buffer, int len) {
-        const std::vector<uint8_t> data(buffer, buffer + len);
+    void cb(const Buffer *buffer) {
+        const std::vector<uint8_t> data(buffer->bytes, buffer->bytes + buffer->len);
         frames.push_back(data);
     }
 
@@ -25,7 +25,7 @@ class HdlcFrameTest : public testing::Test {
     }
 
     std::vector<std::vector<uint8_t>> frames;
-    _hdlc_frame_state *state;
+    hdlc_frame_state *state;
 };
 
 TEST_F(HdlcFrameTest, simpleFrame) {
@@ -63,8 +63,8 @@ TEST_F(HdlcFrameTest, frameWithEscapeSequence) {
 #endif
 
 TEST_F(HdlcFrameTest, frameTooBig) {
-    hdlc_handle_bytes("7EA1F6");
-    for (int i = 0; i < 500; ++i) {
+    hdlc_handle_bytes("7EA4B2");
+    for (int i = 0; i < 1200; ++i) {
         hdlc_handle_byte(state, 0x01);
     }
     hdlc_handle_byte(state, 0x7E);

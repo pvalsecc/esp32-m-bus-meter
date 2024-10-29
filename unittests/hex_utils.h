@@ -1,3 +1,4 @@
+#include <buffer.h>
 #include <gtest/gtest.h>
 #include <inttypes.h>
 #include <vector>
@@ -19,6 +20,19 @@ static std::vector<uint8_t> hex2vector(const char *hex) {
     std::vector<uint8_t> result;
     while (hex[0] && hex[1]) {
         result.push_back(hex2int(hex[0]) << 4 | hex2int(hex[1]));
+        hex += 2;
+        while (hex[0] == ' ') {
+            ++hex;
+        }
+    }
+    return result;
+}
+
+static Buffer hex2buffer(const char *hex) {
+    Buffer result;
+    buffer_reset(&result);
+    while (hex[0] && hex[1]) {
+        buffer_add_byte(&result, hex2int(hex[0]) << 4 | hex2int(hex[1]));
         hex += 2;
         while (hex[0] == ' ') {
             ++hex;

@@ -1,4 +1,6 @@
 #include "hdlc_fields.h"
+#include "buffer.h"
+#include "stream.h"
 #include <esp_log.h>
 
 static const char *TAG = "HDLC";
@@ -11,28 +13,25 @@ static const char *TAG = "HDLC";
 //              --          control
 //                 ----       hcs
 
-bool hdlc_decode_type_length(const uint8_t *bytes, int len, int *pos, uint8_t *outType, bool *outSegmentation,
-                             uint16_t *outLength) {
-    if (len - *pos < 1) {
+bool hdlc_decode_type_length(Stream *stream, uint8_t *outType, bool *outSegmentation, uint16_t *outLength) {
+    uint8_t firstByte;
+    if (!stream_getu8(stream, &firstByte)) {
         return false;
     }
-    const uint8_t firstByte = bytes[*pos];
     if ((firstByte & (uint8_t)0x80) == 0) {
         *outType = 0;
         *outLength = firstByte & (uint8_t)0x7F;
         *outSegmentation = false;
-        ++*pos;
         return true;
     } else {
-        if (len - *pos < 2) {
-            return false;
-        }
-
         *outType = ((firstByte & (uint8_t)0x70) >> 4) + 1;
         if (*outType >= 1 && *outType <= 7) {
+            uint8_t secondByte;
+            if (!stream_getu8(stream, &secondByte)) {
+                return false;
+            }
             *outSegmentation = (firstByte & (uint8_t)0x08) != 0;
-            *outLength = ((uint16_t)firstByte & (uint16_t)0x07) << 8 | bytes[*pos + 1];
-            (*pos) += 2;
+            *outLength = ((uint16_t)firstByte & (uint16_t)0x07) << 8 | secondByte;
             return true;
         } else {
             return false;
@@ -40,16 +39,16 @@ bool hdlc_decode_type_length(const uint8_t *bytes, int len, int *pos, uint8_t *o
     }
 }
 
-bool hdlc_decode_address(const uint8_t *bytes, int len, int *pos, int *outAddressLen) {
+bool hdlc_decode_address(Stream *stream, int *outAddressLen) {
     if (outAddressLen) {
         *outAddressLen = 0;
     }
     while (true) {
-        if (*pos >= len) {
+        uint8_t byte;
+        if (!stream_getu8(stream, &byte)) {
             return false;
         }
-        const bool last = (bytes[*pos] & 0x01) == 0x01;
-        ++*pos;
+        const bool last = (byte & 0x01) == 0x01;
         if (outAddressLen) {
             ++*outAddressLen;
         }
@@ -59,12 +58,11 @@ bool hdlc_decode_address(const uint8_t *bytes, int len, int *pos, int *outAddres
     }
 }
 
-bool hdlc_decode_control(const uint8_t *bytes, int len, int *pos, ControlField *controlfield) {
-    if (len - *pos < 1) {
+bool hdlc_decode_control(Stream *stream, ControlField *controlfield) {
+    uint8_t byte;
+    if (!stream_getu8(stream, &byte)) {
         return false;
     }
-    uint8_t byte = bytes[*pos];
-    ++*pos;
 
     controlfield->finalBit = (byte & 0x10) == 0x10;
     if ((byte & 0x01) == 0) {
@@ -115,17 +113,15 @@ static uint16_t compute_checksum(const uint8_t *data, int length) {
     return fcs;
 }
 
-bool hdlc_decode_crc16(const uint8_t *bytes, int len, int *pos) {
-    if (len - *pos < 2) {
+bool hdlc_decode_crc16(Stream *stream) {
+    const uint16_t computedCrc16 = compute_checksum(stream->buffer->bytes, stream->pos);
+    uint16_t crc16;
+    if (!stream_getu16_le(stream, &crc16)) {
         return false;
     }
-    const uint16_t computedCrc16 = compute_checksum(bytes, *pos);
-    const uint16_t crc16 = bytes[*pos] | bytes[(*pos) + 1] << 8;
-    *pos += 2;
 
     if (crc16 != computedCrc16) {
-        const uint16_t fullCrc16 = compute_checksum(bytes, *pos);
-        ESP_LOGW(TAG, "Invalid CRC: 0x%04x != 0x%04x (full: 0x%04x != 0x1d0f)", crc16, computedCrc16, fullCrc16);
+        ESP_LOGW(TAG, "Invalid CRC: 0x%04x != 0x%04x", crc16, computedCrc16);
         return false;
     }
     return true;

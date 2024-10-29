@@ -1,4 +1,5 @@
 #include "hdlc_frame.h"
+#include "buffer.h"
 #include <esp_log.h>
 #include <stdlib.h>
 
@@ -17,10 +18,9 @@ static const int FLAG_BYTE = 0x7E;
 static const int ESCAPE_BYTE = 0x7D;
 #endif
 
-typedef struct _hdlc_frame_state {
+typedef struct hdlc_frame_state {
     State state;
-    uint8_t buffer[256];
-    int pos;
+    Buffer buffer;
     int expectedLen;
     hdlc_frame_cb cb;
     void *arg;
@@ -29,18 +29,18 @@ typedef struct _hdlc_frame_state {
 hdlc_frame_state *hdlc_frame_init(hdlc_frame_cb cb, void *arg) {
     hdlc_frame_state *state = malloc(sizeof(hdlc_frame_state));
     state->state = WAIT_SYNC;
-    state->pos = 0;
+    buffer_reset(&state->buffer);
     state->cb = cb;
     state->arg = arg;
     return state;
 }
 
-void hdlc_handle_byte(struct _hdlc_frame_state *state, uint8_t byte) {
+void hdlc_handle_byte(hdlc_frame_state *state, uint8_t byte) {
     switch (state->state) {
     case WAIT_SYNC:
         if (byte == FLAG_BYTE) {
             // got a start byte
-            state->pos = 0;
+            buffer_reset(&state->buffer);
             state->expectedLen = 0;
             state->state = WAIT_TYPE;
         }
@@ -52,8 +52,7 @@ void hdlc_handle_byte(struct _hdlc_frame_state *state, uint8_t byte) {
             // we support only type 3 packets
             state->expectedLen = ((uint16_t)byte & (uint16_t)0x07) << 8;
             state->state = WAIT_LEN;
-            state->buffer[state->pos] = byte;
-            state->pos++;
+            buffer_add_byte(&state->buffer, byte);
         } else {
             // false start
             state->state = WAIT_SYNC;
@@ -62,33 +61,31 @@ void hdlc_handle_byte(struct _hdlc_frame_state *state, uint8_t byte) {
     case WAIT_LEN:
         state->expectedLen |= byte;
         state->state = DATA;
-        state->buffer[state->pos] = byte;
-        state->pos++;
+        buffer_add_byte(&state->buffer, byte);
         break;
     case DATA:
-        if (byte == FLAG_BYTE && state->pos == state->expectedLen) {
+        if (byte == FLAG_BYTE && state->buffer.len == state->expectedLen) {
             // got the end
-            if (state->pos > 0) {
-                state->cb(state->arg, state->buffer, state->pos);
+            if (state->buffer.len > 0) {
+                state->cb(state->arg, &state->buffer);
             }
-            state->pos = 0;
+            buffer_reset(&state->buffer);
             state->expectedLen = 0;
             state->state = WAIT_TYPE;
-        } else if (state->pos >= state->expectedLen) {
+        } else if (state->buffer.len >= state->expectedLen) {
             ESP_LOGW(TAG, "Got more bytes than expected");
-            state->pos = 0;
-            state->state = WAIT_SYNC;
-        } else if (state->pos > sizeof(state->buffer)) {
-            ESP_LOGW(TAG, "Buffer overflow, ignoring a frame");
-            state->pos = 0;
+            buffer_reset(&state->buffer);
             state->state = WAIT_SYNC;
 #ifdef HANDLE_ESCAPE
         } else if (byte == ESCAPE_BYTE) {
             state->state = ESCAPE;
 #endif
         } else {
-            state->buffer[state->pos] = byte;
-            state->pos++;
+            if (!buffer_add_byte(&state->buffer, byte)) {
+                ESP_LOGW(TAG, "Buffer overflow, ignoring a frame");
+                buffer_reset(&state->buffer);
+                state->state = WAIT_SYNC;
+            }
         }
         break;
 #ifdef HANDLE_ESCAPE
@@ -103,11 +100,10 @@ void hdlc_handle_byte(struct _hdlc_frame_state *state, uint8_t byte) {
             state->pos++;
             if (state->pos > sizeof(state->buffer)) {
                 ESP_LOGW(TAG, "Buffer overflow, ignoring a frame");
-                state->pos = 0;
+                buffer_reset(&state->buffer);
                 state->state = WAIT_SYNC;
             } else {
-                state->buffer[state->pos] = byte;
-                state->pos++;
+                buffer_add_byte(&state->buffer, byte);
             }
         }
         state->state = DATA;

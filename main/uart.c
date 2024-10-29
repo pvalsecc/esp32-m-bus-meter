@@ -1,4 +1,5 @@
 #include "uart.h"
+#include "buffer.h"
 #include "dlms.h"
 #include "hdlc_frame.h"
 #include "hdlc_packet.h"
@@ -6,7 +7,6 @@
 #include <driver/gpio.h>
 #include <driver/uart.h>
 #include <esp_log.h>
-#include <sys/cdefs.h>
 
 static const char *TAG = "uart";
 #define UART_PORT UART_NUM_1
@@ -21,49 +21,31 @@ static const uart_config_t uart_config = {
     .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
 };
 
-static void hdlc_frame_received(void *arg, const uint8_t *bytes, int size) {
+static void hdlc_frame_received(void *arg, const Buffer *buffer) {
     struct dlms_state *dlmsState = (struct dlms_state *)arg;
-    Information information = hdlc_packet_decode(bytes, size);
-    if (information.size == 0) {
+    Buffer information;
+    if (hdlc_packet_decode(buffer, &information)) {
         ESP_LOGW(TAG, "Failed parsing this HDLC frame:");
-        for (int i = 0; i < size; ++i) {
-            if (i % 4 == 0) {
-                printf(" ");
-            }
-            printf("%02X", bytes[i]);
-        }
-        printf("\n");
+        buffer_dump(buffer);
         return;
     }
-    if (!dlms_decode(dlmsState, information.bytes, information.size)) {
+    if (!dlms_decode(dlmsState, &information)) {
         ESP_LOGW(TAG, "Failed parsing this HDLC information:");
-        for (int i = 0; i < information.size; ++i) {
-            if (i % 4 == 0) {
-                printf(" ");
-            }
-            printf("%02X", information.bytes[i]);
-        }
-        printf("\n");
+        buffer_dump(&information);
     }
 }
 
-static void dlms_frame_received(void *arg, const uint8_t *bytes, int size) {
-    if (!pdu_decode(bytes, size)) {
+static void dlms_frame_received(void *arg, const Buffer *buffer) {
+    if (!pdu_decode(buffer)) {
         ESP_LOGW(TAG, "Failed parsing DLMS packet:");
-        for (int i = 0; i < size; ++i) {
-            if (i % 4 == 0) {
-                printf(" ");
-            }
-            printf("%02X", bytes[i]);
-        }
-        printf("\n");
+        buffer_dump(buffer);
     }
 }
 
 _Noreturn void uart_task(void *arg) {
     uint8_t *data = (uint8_t *)malloc(UART_BUF_SIZE);
     struct dlms_state *dlmsState = dlms_init(dlms_frame_received, NULL);
-    struct _hdlc_frame_state *frameState = hdlc_frame_init(hdlc_frame_received, dlmsState);
+    struct hdlc_frame_state *frameState = hdlc_frame_init(hdlc_frame_received, dlmsState);
     while (true) {
         int len = uart_read_bytes(UART_PORT, data, 1, portMAX_DELAY);
         for (int i = 0; i < len; ++i) {
