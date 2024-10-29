@@ -136,6 +136,7 @@ void zigbee_meter_update_active_power(int16_t powerWatts) {
         ESP_LOGE(TAG, "Sending active power attribute report command failed: %d", state);
         return;
     }
+    ESP_LOGI(TAG, "Done updating the active power");
 }
 
 static void updateElectricalMeasurementUint16Attr(uint8_t endpoint, uint16_t attrId, uint16_t value) {
@@ -170,12 +171,14 @@ void zigbee_meter_update_rms_current(int phase, uint16_t currentAmps) {
     ESP_LOGI(TAG, "Update the RMS current on phase %d: %dA", phase + 1, currentAmps);
     updateElectricalMeasurementUint16Attr(ELECTRICAL_MEASUREMENT_ENDPOINT_FIRST_ID + phase,
                                           ESP_ZB_ZCL_ATTR_ELECTRICAL_MEASUREMENT_RMSCURRENT_ID, currentAmps);
+    ESP_LOGI(TAG, "Done updating the RMS current on phase %d", phase + 1);
 }
 
 void zigbee_meter_update_rms_voltage(int phase, uint16_t voltageVolts) {
     ESP_LOGI(TAG, "Update the RMS voltage on phase %d: %dV", phase + 1, voltageVolts);
     updateElectricalMeasurementUint16Attr(ELECTRICAL_MEASUREMENT_ENDPOINT_FIRST_ID + phase,
                                           ESP_ZB_ZCL_ATTR_ELECTRICAL_MEASUREMENT_RMSVOLTAGE_ID, voltageVolts);
+    ESP_LOGI(TAG, "Done updating the RMS voltage on phase %d", phase + 1);
 }
 
 static void updateMeteringUint64Attr(uint8_t endpoint, uint16_t attrId, uint64_t value) {
@@ -208,9 +211,11 @@ static void updateMeteringUint64Attr(uint8_t endpoint, uint16_t attrId, uint64_t
 void zigbee_meter_update_summation_received(uint64_t energy) {
     ESP_LOGI(TAG, "Update the summation received: %lluW/h", energy);
     updateMeteringUint64Attr(METERING_ENDPOINT_ID, ESP_ZB_ZCL_ATTR_METERING_CURRENT_SUMMATION_RECEIVED_ID, energy);
+    ESP_LOGI(TAG, "Done updating the summation received");
 }
 
 void zigbee_meter_update_summation_delivered(uint64_t energy) {
     ESP_LOGI(TAG, "Update the summation delivered: %lluW/h", energy);
     updateMeteringUint64Attr(METERING_ENDPOINT_ID, ESP_ZB_ZCL_ATTR_METERING_CURRENT_SUMMATION_DELIVERED_ID, energy);
+    ESP_LOGI(TAG, "Done updating the summation delivered");
 }
