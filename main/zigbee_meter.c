@@ -40,11 +40,11 @@ static void create_electrical_measurement_ep(esp_zb_ep_list_t *epList, int16_t p
             electricalMeasurementCluster, ESP_ZB_ZCL_ATTR_ELECTRICAL_MEASUREMENT_ACTIVE_POWER_ID, &active_power_a));
     }
 
-    uint16_t rmsVoltage = 42;
+    uint16_t rmsVoltage = 235;
     ESP_ERROR_CHECK(esp_zb_electrical_meas_cluster_add_attr(
         electricalMeasurementCluster, ESP_ZB_ZCL_ATTR_ELECTRICAL_MEASUREMENT_RMSVOLTAGE_ID, &rmsVoltage));
 
-    uint16_t rmsCurrent = 42;
+    uint16_t rmsCurrent = 0;
     ESP_ERROR_CHECK(esp_zb_electrical_meas_cluster_add_attr(
         electricalMeasurementCluster, ESP_ZB_ZCL_ATTR_ELECTRICAL_MEASUREMENT_RMSCURRENT_ID, &rmsCurrent));
 
@@ -72,7 +72,7 @@ static void create_metering_ep(esp_zb_ep_list_t *epList) {
 
     esp_zb_attribute_list_t *meteringCluster = esp_zb_zcl_attr_list_create(ESP_ZB_ZCL_CLUSTER_ID_METERING);
 
-    uint64_t currentSummationDelivered = 34567;
+    uint64_t currentSummationDelivered = 0;
     ESP_ERROR_CHECK(esp_zb_cluster_add_attr(
         meteringCluster, ESP_ZB_ZCL_CLUSTER_ID_METERING, ESP_ZB_ZCL_ATTR_METERING_CURRENT_SUMMATION_DELIVERED_ID,
         ESP_ZB_ZCL_ATTR_TYPE_U48, ESP_ZB_ZCL_ATTR_ACCESS_READ_ONLY | ESP_ZB_ZCL_ATTR_ACCESS_REPORTING,
