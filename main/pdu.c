@@ -176,11 +176,14 @@ static bool decode_item(Stream *stream, StateValues *stateValues) {
                 zigbee_meter_update_summation_received(value);
             } else if (curFieldIs(stateValues, EXPORTED_ACTIVE_ENERGY_FIELD)) {
                 zigbee_meter_update_summation_delivered(value);
-            } else if (curFieldIs(stateValues, IMPORTED_ACTIVE_ENERGY_RATE1_FIELD) ||
-                       curFieldIs(stateValues, IMPORTED_ACTIVE_ENERGY_RATE2_FIELD) ||
-                       curFieldIs(stateValues, EXPORTED_ACTIVE_ENERGY_RATE1_FIELD) ||
-                       curFieldIs(stateValues, EXPORTED_ACTIVE_ENERGY_RATE2_FIELD)) {
-                // ignored field
+            } else if (curFieldIs(stateValues, IMPORTED_ACTIVE_ENERGY_RATE1_FIELD)) {
+                zigbee_meter_update_tier_summation_received(0, value);
+            } else if (curFieldIs(stateValues, EXPORTED_ACTIVE_ENERGY_RATE1_FIELD)) {
+                zigbee_meter_update_tier_summation_delivered(0, value);
+            } else if (curFieldIs(stateValues, IMPORTED_ACTIVE_ENERGY_RATE2_FIELD)) {
+                zigbee_meter_update_tier_summation_received(1, value);
+            } else if (curFieldIs(stateValues, EXPORTED_ACTIVE_ENERGY_RATE2_FIELD)) {
+                zigbee_meter_update_tier_summation_delivered(1, value);
             } else {
                 const FieldDef *curField = stateValues->fields + stateValues->curUseField;
                 ESP_LOGW(TAG, "Wrong uint32 type for field: %d.%d.%d.%d.%d.%d", curField->field2[0],

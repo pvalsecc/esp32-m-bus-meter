@@ -88,11 +88,20 @@ static void create_metering_ep(esp_zb_ep_list_t *epList) {
     ESP_ERROR_CHECK(esp_zb_cluster_add_attr(
         meteringCluster, ESP_ZB_ZCL_CLUSTER_ID_METERING, ESP_ZB_ZCL_ATTR_METERING_SUMMATION_FORMATTING_ID,
         ESP_ZB_ZCL_ATTR_TYPE_8BITMAP, ESP_ZB_ZCL_ATTR_ACCESS_READ_ONLY, &summationFormatting));
+    ESP_ERROR_CHECK(esp_zb_cluster_add_attr(meteringCluster, ESP_ZB_ZCL_CLUSTER_ID_METERING,
+                                            ESP_ZB_ZCL_ATTR_METERING_DEMAND_FORMATTING_ID, ESP_ZB_ZCL_ATTR_TYPE_8BITMAP,
+                                            ESP_ZB_ZCL_ATTR_ACCESS_READ_ONLY, &summationFormatting));
 
     uint32_t divisor = 1000; // we get the stuff in Wh and need kWh
     ESP_ERROR_CHECK(esp_zb_cluster_add_attr(meteringCluster, ESP_ZB_ZCL_CLUSTER_ID_METERING,
                                             ESP_ZB_ZCL_ATTR_METERING_DIVISOR_ID, ESP_ZB_ZCL_ATTR_TYPE_U24,
                                             ESP_ZB_ZCL_ATTR_ACCESS_READ_ONLY, &divisor));
+
+    int32_t currentPower = 0;
+    ESP_ERROR_CHECK(
+        esp_zb_cluster_add_attr(meteringCluster, ESP_ZB_ZCL_CLUSTER_ID_METERING,
+                                ESP_ZB_ZCL_ATTR_METERING_INSTANTANEOUS_DEMAND_ID, ESP_ZB_ZCL_ATTR_TYPE_24BIT,
+                                ESP_ZB_ZCL_ATTR_ACCESS_READ_ONLY | ESP_ZB_ZCL_ATTR_ACCESS_REPORTING, &currentPower));
 
     uint64_t currentSummationDelivered = 0;
     ESP_ERROR_CHECK(esp_zb_cluster_add_attr(
@@ -103,6 +112,26 @@ static void create_metering_ep(esp_zb_ep_list_t *epList) {
     uint64_t currentSummationReceived = 0;
     ESP_ERROR_CHECK(esp_zb_cluster_add_attr(
         meteringCluster, ESP_ZB_ZCL_CLUSTER_ID_METERING, ESP_ZB_ZCL_ATTR_METERING_CURRENT_SUMMATION_RECEIVED_ID,
+        ESP_ZB_ZCL_ATTR_TYPE_U48, ESP_ZB_ZCL_ATTR_ACCESS_READ_ONLY | ESP_ZB_ZCL_ATTR_ACCESS_REPORTING,
+        &currentSummationReceived));
+
+    ESP_ERROR_CHECK(esp_zb_cluster_add_attr(
+        meteringCluster, ESP_ZB_ZCL_CLUSTER_ID_METERING, ESP_ZB_ZCL_ATTR_METERING_CURRENT_TIER1_SUMMATION_DELIVERED_ID,
+        ESP_ZB_ZCL_ATTR_TYPE_U48, ESP_ZB_ZCL_ATTR_ACCESS_READ_ONLY | ESP_ZB_ZCL_ATTR_ACCESS_REPORTING,
+        &currentSummationDelivered));
+
+    ESP_ERROR_CHECK(esp_zb_cluster_add_attr(
+        meteringCluster, ESP_ZB_ZCL_CLUSTER_ID_METERING, ESP_ZB_ZCL_ATTR_METERING_CURRENT_TIER1_SUMMATION_RECEIVED_ID,
+        ESP_ZB_ZCL_ATTR_TYPE_U48, ESP_ZB_ZCL_ATTR_ACCESS_READ_ONLY | ESP_ZB_ZCL_ATTR_ACCESS_REPORTING,
+        &currentSummationReceived));
+
+    ESP_ERROR_CHECK(esp_zb_cluster_add_attr(
+        meteringCluster, ESP_ZB_ZCL_CLUSTER_ID_METERING, ESP_ZB_ZCL_ATTR_METERING_CURRENT_TIER2_SUMMATION_DELIVERED_ID,
+        ESP_ZB_ZCL_ATTR_TYPE_U48, ESP_ZB_ZCL_ATTR_ACCESS_READ_ONLY | ESP_ZB_ZCL_ATTR_ACCESS_REPORTING,
+        &currentSummationDelivered));
+
+    ESP_ERROR_CHECK(esp_zb_cluster_add_attr(
+        meteringCluster, ESP_ZB_ZCL_CLUSTER_ID_METERING, ESP_ZB_ZCL_ATTR_METERING_CURRENT_TIER2_SUMMATION_RECEIVED_ID,
         ESP_ZB_ZCL_ATTR_TYPE_U48, ESP_ZB_ZCL_ATTR_ACCESS_READ_ONLY | ESP_ZB_ZCL_ATTR_ACCESS_REPORTING,
         &currentSummationReceived));
 
@@ -135,7 +164,6 @@ void zigbee_meter_update_active_power(int16_t powerWatts) {
     ESP_LOGI(TAG, "Update the active power: %dW", powerWatts);
     esp_zb_lock_acquire(portMAX_DELAY);
     esp_zb_zcl_report_attr_cmd_t cmdReq = {.zcl_basic_cmd.src_endpoint = ELECTRICAL_MEASUREMENT_ENDPOINT_FIRST_ID,
-                                           .address_mode = ESP_ZB_APS_ADDR_MODE_DST_ADDR_ENDP_NOT_PRESENT,
                                            .clusterID = ESP_ZB_ZCL_CLUSTER_ID_ELECTRICAL_MEASUREMENT,
                                            .cluster_role = ESP_ZB_ZCL_CLUSTER_SERVER_ROLE,
                                            .attributeID = ESP_ZB_ZCL_ATTR_ELECTRICAL_MEASUREMENT_ACTIVE_POWER_ID};
@@ -150,7 +178,31 @@ void zigbee_meter_update_active_power(int16_t powerWatts) {
         return;
     }
 
+    esp_zb_zcl_report_attr_cmd_t cmdReq2 = {.zcl_basic_cmd.src_endpoint = METERING_ENDPOINT_ID,
+                                            .clusterID = ESP_ZB_ZCL_CLUSTER_ID_METERING,
+                                            .cluster_role = ESP_ZB_ZCL_CLUSTER_SERVER_ROLE,
+                                            .attributeID = ESP_ZB_ZCL_ATTR_METERING_INSTANTANEOUS_DEMAND_ID};
+
+    int32_t power32 = powerWatts;
+    state = esp_zb_zcl_set_attribute_val(cmdReq2.zcl_basic_cmd.src_endpoint, cmdReq2.clusterID, cmdReq2.cluster_role,
+                                         cmdReq2.attributeID, &power32, false);
+
+    if (state != ESP_ZB_ZCL_STATUS_SUCCESS) {
+        esp_zb_lock_release();
+        ESP_LOGE(TAG, "Setting active power attribute failed: %d", state);
+        return;
+    }
+
     state = esp_zb_zcl_report_attr_cmd_req(&cmdReq);
+
+    /* Check for error */
+    if (state != ESP_ZB_ZCL_STATUS_SUCCESS) {
+        esp_zb_lock_release();
+        ESP_LOGE(TAG, "Sending active power attribute report command failed: %d", state);
+        return;
+    }
+
+    state = esp_zb_zcl_report_attr_cmd_req(&cmdReq2);
     esp_zb_lock_release();
 
     /* Check for error */
@@ -164,7 +216,6 @@ void zigbee_meter_update_active_power(int16_t powerWatts) {
 static void updateElectricalMeasurementUint16Attr(uint8_t endpoint, uint16_t attrId, uint16_t value) {
     esp_zb_lock_acquire(portMAX_DELAY);
     esp_zb_zcl_report_attr_cmd_t cmdReq = {.zcl_basic_cmd.src_endpoint = endpoint,
-                                           .address_mode = ESP_ZB_APS_ADDR_MODE_DST_ADDR_ENDP_NOT_PRESENT,
                                            .clusterID = ESP_ZB_ZCL_CLUSTER_ID_ELECTRICAL_MEASUREMENT,
                                            .cluster_role = ESP_ZB_ZCL_CLUSTER_SERVER_ROLE,
                                            .attributeID = attrId};
@@ -206,7 +257,6 @@ void zigbee_meter_update_rms_voltage(int phase, uint16_t voltageVolts) {
 static void updateMeteringUint64Attr(uint8_t endpoint, uint16_t attrId, uint64_t value) {
     esp_zb_lock_acquire(portMAX_DELAY);
     esp_zb_zcl_report_attr_cmd_t cmdReq = {.zcl_basic_cmd.src_endpoint = endpoint,
-                                           .address_mode = ESP_ZB_APS_ADDR_MODE_DST_ADDR_ENDP_NOT_PRESENT,
                                            .clusterID = ESP_ZB_ZCL_CLUSTER_ID_METERING,
                                            .cluster_role = ESP_ZB_ZCL_CLUSTER_SERVER_ROLE,
                                            .attributeID = attrId};
@@ -239,5 +289,19 @@ void zigbee_meter_update_summation_received(uint64_t energy) {
 void zigbee_meter_update_summation_delivered(uint64_t energy) {
     ESP_LOGI(TAG, "Update the summation delivered: %lluW/h", energy);
     updateMeteringUint64Attr(METERING_ENDPOINT_ID, ESP_ZB_ZCL_ATTR_METERING_CURRENT_SUMMATION_DELIVERED_ID, energy);
+    ESP_LOGI(TAG, "Done updating the summation delivered");
+}
+
+void zigbee_meter_update_tier_summation_received(int tier, uint64_t energy) {
+    ESP_LOGI(TAG, "Update the summation received tier %d: %lluW/h", tier + 1, energy);
+    updateMeteringUint64Attr(METERING_ENDPOINT_ID,
+                             ESP_ZB_ZCL_ATTR_METERING_CURRENT_TIER1_SUMMATION_RECEIVED_ID + 2 * tier, energy);
+    ESP_LOGI(TAG, "Done updating the summation received");
+}
+
+void zigbee_meter_update_tier_summation_delivered(int tier, uint64_t energy) {
+    ESP_LOGI(TAG, "Update the summation delivered tier %d: %lluW/h", tier + 1, energy);
+    updateMeteringUint64Attr(METERING_ENDPOINT_ID,
+                             ESP_ZB_ZCL_ATTR_METERING_CURRENT_TIER1_SUMMATION_DELIVERED_ID + 2 * tier, energy);
     ESP_LOGI(TAG, "Done updating the summation delivered");
 }

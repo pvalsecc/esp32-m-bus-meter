@@ -31,6 +31,12 @@ void zigbee_meter_update_summation_received(uint64_t energy) { summationReceived
 static uint64_t summationDelivered = 0;
 void zigbee_meter_update_summation_delivered(uint64_t energy) { summationDelivered = energy; }
 
+static uint64_t tierSummationReceived[2] = {};
+void zigbee_meter_update_tier_summation_received(int tier, uint64_t energy) { tierSummationReceived[tier] = energy; }
+
+static uint64_t tierSummationDelivered[2] = {};
+void zigbee_meter_update_tier_summation_delivered(int tier, uint64_t energy) { tierSummationDelivered[tier] = energy; }
+
 #ifdef __cplusplus
 }
 #endif
@@ -63,4 +69,8 @@ TEST(PduTest, other) {
                    "FF0F0212 00000204 12000309 06010102 0801FF0F 02120000 02041200 03090601 01020802 FF0F0212 00000906 "
                    "00091909 00FF0600 1EDFFC06 001E9F8F 06000000 00060000 0000");
     ASSERT_TRUE(pdu_decode(&packet));
+    EXPECT_EQ(tierSummationReceived[0], 2023420);
+    EXPECT_EQ(tierSummationDelivered[0], 0);
+    EXPECT_EQ(tierSummationReceived[1], 2006927);
+    EXPECT_EQ(tierSummationDelivered[1], 0);
 }

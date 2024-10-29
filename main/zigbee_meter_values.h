@@ -14,6 +14,8 @@ void zigbee_meter_update_rms_current(int phase, uint16_t currentAmps);
 void zigbee_meter_update_rms_voltage(int phase, uint16_t voltageVolts);
 void zigbee_meter_update_summation_received(uint64_t energy);
 void zigbee_meter_update_summation_delivered(uint64_t energy);
+void zigbee_meter_update_tier_summation_received(int tier, uint64_t energy);
+void zigbee_meter_update_tier_summation_delivered(int tier, uint64_t energy);
 
 #ifdef __cplusplus
 }

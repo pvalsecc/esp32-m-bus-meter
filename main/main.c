@@ -16,10 +16,9 @@ static void long_press(void *arg, void *usr_data) { zigbee_reset_pairing(); }
 static int16_t curValue = 0;
 
 static void single_click(void *arg, void *usr_data) {
-    static int values[7] = {};
+    static int values[9] = {};
     int newValue = ++values[curValue];
     if (curValue == 0) {
-        ESP_LOGI(TAG, "Set power to %d", newValue);
         zigbee_meter_update_active_power(newValue);
     } else if (curValue >= 1 && curValue <= 3) {
         zigbee_meter_update_rms_current(curValue - 1, newValue);
