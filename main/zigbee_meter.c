@@ -72,6 +72,28 @@ static void create_metering_ep(esp_zb_ep_list_t *epList) {
 
     esp_zb_attribute_list_t *meteringCluster = esp_zb_zcl_attr_list_create(ESP_ZB_ZCL_CLUSTER_ID_METERING);
 
+    uint8_t deviceType = ESP_ZB_ZCL_METERING_ELECTRIC_METERING;
+    ESP_ERROR_CHECK(esp_zb_cluster_add_attr(
+        meteringCluster, ESP_ZB_ZCL_CLUSTER_ID_METERING, ESP_ZB_ZCL_ATTR_METERING_METERING_DEVICE_TYPE_ID,
+        ESP_ZB_ZCL_ATTR_TYPE_8BITMAP, ESP_ZB_ZCL_ATTR_ACCESS_READ_ONLY, &deviceType));
+
+    uint8_t unitOfMeasure = 0; // kWh
+    ESP_ERROR_CHECK(esp_zb_cluster_add_attr(meteringCluster, ESP_ZB_ZCL_CLUSTER_ID_METERING,
+                                            ESP_ZB_ZCL_ATTR_METERING_UNIT_OF_MEASURE_ID, ESP_ZB_ZCL_ATTR_TYPE_8BIT_ENUM,
+                                            ESP_ZB_ZCL_ATTR_ACCESS_READ_ONLY, &unitOfMeasure));
+
+    uint8_t summationFormatting = 0x80 /* suppress leading 0s */ |
+                                  6 << 3 /* 6 digits on the left of the decimal point */ |
+                                  3 /* 3 digits on the right */;
+    ESP_ERROR_CHECK(esp_zb_cluster_add_attr(
+        meteringCluster, ESP_ZB_ZCL_CLUSTER_ID_METERING, ESP_ZB_ZCL_ATTR_METERING_SUMMATION_FORMATTING_ID,
+        ESP_ZB_ZCL_ATTR_TYPE_8BITMAP, ESP_ZB_ZCL_ATTR_ACCESS_READ_ONLY, &summationFormatting));
+
+    uint32_t divisor = 1000; // we get the stuff in Wh and need kWh
+    ESP_ERROR_CHECK(esp_zb_cluster_add_attr(meteringCluster, ESP_ZB_ZCL_CLUSTER_ID_METERING,
+                                            ESP_ZB_ZCL_ATTR_METERING_DIVISOR_ID, ESP_ZB_ZCL_ATTR_TYPE_U24,
+                                            ESP_ZB_ZCL_ATTR_ACCESS_READ_ONLY, &divisor));
+
     uint64_t currentSummationDelivered = 0;
     ESP_ERROR_CHECK(esp_zb_cluster_add_attr(
         meteringCluster, ESP_ZB_ZCL_CLUSTER_ID_METERING, ESP_ZB_ZCL_ATTR_METERING_CURRENT_SUMMATION_DELIVERED_ID,
