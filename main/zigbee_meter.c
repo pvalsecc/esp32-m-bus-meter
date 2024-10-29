@@ -48,6 +48,11 @@ static void create_electrical_measurement_ep(esp_zb_ep_list_t *epList, int16_t p
     ESP_ERROR_CHECK(esp_zb_electrical_meas_cluster_add_attr(
         electricalMeasurementCluster, ESP_ZB_ZCL_ATTR_ELECTRICAL_MEASUREMENT_RMSCURRENT_ID, &rmsCurrent));
 
+    // The current appears to be in centi amps
+    uint16_t currentDivisor = 100;
+    ESP_ERROR_CHECK(esp_zb_electrical_meas_cluster_add_attr(
+        electricalMeasurementCluster, ESP_ZB_ZCL_ATTR_ELECTRICAL_MEASUREMENT_ACCURRENT_DIVISOR_ID, &currentDivisor));
+
     ESP_ERROR_CHECK(esp_zb_cluster_list_add_electrical_meas_cluster(clusterList, electricalMeasurementCluster,
                                                                     ESP_ZB_ZCL_CLUSTER_SERVER_ROLE));
 
