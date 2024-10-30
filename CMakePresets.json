@@ -1,0 +1,22 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 25,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "UT",
+      "description": "A preset to be able to build and run the unittests on a Linux host",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/cmake-build-ut"
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "UT",
+      "configurePreset": "UT"
+    }
+  ]
+}
