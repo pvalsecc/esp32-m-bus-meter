@@ -40,3 +40,13 @@ add_executable(pdu_test pdu_test.cpp ../main/pdu.c ../main/buffer.c ../main/stre
 target_link_libraries(pdu_test GTest::gtest_main)
 target_include_directories(pdu_test PRIVATE ../main .)
 gtest_discover_tests(pdu_test)
+
+add_executable(buffer_test buffer_test.cpp ../main/buffer.c)
+target_link_libraries(buffer_test GTest::gtest_main)
+target_include_directories(buffer_test PRIVATE ../main .)
+gtest_discover_tests(buffer_test)
+
+add_executable(stream_test stream_test.cpp ../main/stream.c ../main/buffer.c)
+target_link_libraries(stream_test GTest::gtest_main)
+target_include_directories(stream_test PRIVATE ../main .)
+gtest_discover_tests(stream_test)

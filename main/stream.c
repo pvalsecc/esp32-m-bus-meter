@@ -11,7 +11,12 @@ void stream_reset(Stream *stream, const Buffer *buffer) {
 }
 
 bool stream_get(Stream *stream, uint8_t *value, int len) {
-    if (stream == NULL || value == NULL || stream->pos + len > stream->buffer->len) {
+    if (!stream || !value) {
+        ESP_LOGW(TAG, "Argument error");
+        return false;
+    }
+    if (stream->pos + len > stream->buffer->len) {
+        ESP_LOGW(TAG, "Buffer overflow");
         return false;
     }
     memcpy(value, stream->buffer->bytes + stream->pos, len);
@@ -20,7 +25,12 @@ bool stream_get(Stream *stream, uint8_t *value, int len) {
 }
 
 bool stream_get_buffer(Stream *stream, Buffer *value, int len) {
-    if (stream == NULL || value == NULL || stream->pos + len > stream->buffer->len) {
+    if (!stream || !value) {
+        ESP_LOGW(TAG, "Argument error");
+        return false;
+    }
+    if (stream->pos + len > stream->buffer->len) {
+        ESP_LOGW(TAG, "Buffer overflow");
         return false;
     }
     buffer_add_bytes(value, stream->buffer->bytes + stream->pos, len);
@@ -29,7 +39,12 @@ bool stream_get_buffer(Stream *stream, Buffer *value, int len) {
 }
 
 bool stream_getu8(Stream *stream, uint8_t *value) {
-    if (stream == NULL || value == NULL || stream->pos + 1 > stream->buffer->len) {
+    if (!stream || !value) {
+        ESP_LOGW(TAG, "Argument error");
+        return false;
+    }
+    if (stream->pos + 1 > stream->buffer->len) {
+        ESP_LOGW(TAG, "Buffer overflow");
         return false;
     }
     *value = stream->buffer->bytes[stream->pos++];
@@ -39,7 +54,12 @@ bool stream_getu8(Stream *stream, uint8_t *value) {
 bool stream_get8(Stream *stream, int8_t *value) { return stream_getu8(stream, (uint8_t *)value); }
 
 bool stream_getu16_be(Stream *stream, uint16_t *value) {
-    if (stream == NULL || value == NULL || stream->pos + 2 > stream->buffer->len) {
+    if (!stream || !value) {
+        ESP_LOGW(TAG, "Argument error");
+        return false;
+    }
+    if (stream->pos + 2 > stream->buffer->len) {
+        ESP_LOGW(TAG, "Buffer overflow");
         return false;
     }
     *value = (stream->buffer->bytes[stream->pos] << 8) | stream->buffer->bytes[stream->pos + 1];
@@ -48,7 +68,12 @@ bool stream_getu16_be(Stream *stream, uint16_t *value) {
 }
 
 bool stream_getu32_be(Stream *stream, uint32_t *value) {
-    if (stream == NULL || value == NULL || stream->pos + 4 > stream->buffer->len) {
+    if (!stream || !value) {
+        ESP_LOGW(TAG, "Argument error");
+        return false;
+    }
+    if (stream->pos + 4 > stream->buffer->len) {
+        ESP_LOGW(TAG, "Buffer overflow");
         return false;
     }
     *value = (stream->buffer->bytes[stream->pos] << 24) | (stream->buffer->bytes[stream->pos + 1] << 16) |
@@ -58,7 +83,12 @@ bool stream_getu32_be(Stream *stream, uint32_t *value) {
 }
 
 bool stream_getu16_le(Stream *stream, uint16_t *value) {
-    if (stream == NULL || value == NULL || stream->pos + 2 > stream->buffer->len) {
+    if (!stream || !value) {
+        ESP_LOGW(TAG, "Argument error");
+        return false;
+    }
+    if (stream->pos + 2 > stream->buffer->len) {
+        ESP_LOGW(TAG, "Buffer overflow");
         return false;
     }
     *value = (stream->buffer->bytes[stream->pos + 1] << 8) | stream->buffer->bytes[stream->pos];
@@ -67,11 +97,22 @@ bool stream_getu16_le(Stream *stream, uint16_t *value) {
 }
 
 bool stream_skip(Stream *stream, int nb) {
-    if (stream == NULL || stream->pos + nb > stream->buffer->len) {
+    if (!stream) {
+        ESP_LOGW(TAG, "Argument error");
+        return false;
+    }
+    if (stream->pos + nb > stream->buffer->len) {
+        ESP_LOGW(TAG, "Buffer overflow");
         return false;
     }
     stream->pos += nb;
     return true;
 }
 
-int stream_remains(const Stream *stream) { return stream->buffer->len - stream->pos; }
+int stream_remains(const Stream *stream) {
+    if (!stream) {
+        ESP_LOGW(TAG, "Argument error");
+        return false;
+    }
+    return stream->buffer->len - stream->pos;
+}
