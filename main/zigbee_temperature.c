@@ -80,6 +80,6 @@ void zigbee_temperature_configure_reporting() {
                                                   .u.send_info.def_max_interval = 30 * 60,
                                                   .u.send_info.delta = (union esp_zb_zcl_attr_var_u){.s16 = 10},
                                                   .manuf_code = ESP_ZB_ZCL_ATTR_NON_MANUFACTURER_SPECIFIC,
-                                                  .attr_id = ESP_ZB_ZCL_ATTR_ELECTRICAL_MEASUREMENT_ACTIVE_POWER_ID};
+                                                  .attr_id = ESP_ZB_ZCL_ATTR_TEMP_MEASUREMENT_VALUE_ID};
     ESP_ERROR_CHECK(esp_zb_zcl_update_reporting_info(&reporting_info));
 }

@@ -78,9 +78,11 @@ static void configure_electrical_measurement_reporting(int16_t phase) {
         .manuf_code = ESP_ZB_ZCL_ATTR_NON_MANUFACTURER_SPECIFIC,
     };
 
-    reporting_info.attr_id = ESP_ZB_ZCL_ATTR_ELECTRICAL_MEASUREMENT_ACTIVE_POWER_ID;
-    reporting_info.u.send_info.delta = (union esp_zb_zcl_attr_var_u){.s16 = 1};
-    ESP_ERROR_CHECK(esp_zb_zcl_update_reporting_info(&reporting_info));
+    if (phase == 0) {
+        reporting_info.attr_id = ESP_ZB_ZCL_ATTR_ELECTRICAL_MEASUREMENT_ACTIVE_POWER_ID;
+        reporting_info.u.send_info.delta = (union esp_zb_zcl_attr_var_u){.s16 = 1};
+        ESP_ERROR_CHECK(esp_zb_zcl_update_reporting_info(&reporting_info));
+    }
 
     reporting_info.attr_id = ESP_ZB_ZCL_ATTR_ELECTRICAL_MEASUREMENT_RMSVOLTAGE_ID;
     reporting_info.u.send_info.delta = (union esp_zb_zcl_attr_var_u){.u16 = 1};
