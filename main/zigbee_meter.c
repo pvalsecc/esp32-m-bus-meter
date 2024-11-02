@@ -64,6 +64,33 @@ static void create_electrical_measurement_ep(esp_zb_ep_list_t *epList, int16_t p
     ESP_ERROR_CHECK(esp_zb_ep_list_add_ep(epList, clusterList, onOffEpConfig));
 }
 
+static void configure_electrical_measurement_reporting(int16_t phase) {
+    esp_zb_zcl_reporting_info_t reporting_info = {
+        .direction = ESP_ZB_ZCL_CMD_DIRECTION_TO_SRV,
+        .ep = ELECTRICAL_MEASUREMENT_ENDPOINT_FIRST_ID + phase,
+        .cluster_id = ESP_ZB_ZCL_CLUSTER_ID_ELECTRICAL_MEASUREMENT,
+        .cluster_role = ESP_ZB_ZCL_CLUSTER_SERVER_ROLE,
+        .dst.profile_id = ESP_ZB_AF_HA_PROFILE_ID,
+        .u.send_info.min_interval = 5,
+        .u.send_info.max_interval = 120,
+        .u.send_info.def_min_interval = 5,
+        .u.send_info.def_max_interval = 120,
+        .manuf_code = ESP_ZB_ZCL_ATTR_NON_MANUFACTURER_SPECIFIC,
+    };
+
+    reporting_info.attr_id = ESP_ZB_ZCL_ATTR_ELECTRICAL_MEASUREMENT_ACTIVE_POWER_ID;
+    reporting_info.u.send_info.delta = (union esp_zb_zcl_attr_var_u){.s16 = 1};
+    ESP_ERROR_CHECK(esp_zb_zcl_update_reporting_info(&reporting_info));
+
+    reporting_info.attr_id = ESP_ZB_ZCL_ATTR_ELECTRICAL_MEASUREMENT_RMSVOLTAGE_ID;
+    reporting_info.u.send_info.delta = (union esp_zb_zcl_attr_var_u){.u16 = 1};
+    ESP_ERROR_CHECK(esp_zb_zcl_update_reporting_info(&reporting_info));
+
+    reporting_info.attr_id = ESP_ZB_ZCL_ATTR_ELECTRICAL_MEASUREMENT_RMSCURRENT_ID;
+    reporting_info.u.send_info.delta = (union esp_zb_zcl_attr_var_u){.u16 = 1};
+    ESP_ERROR_CHECK(esp_zb_zcl_update_reporting_info(&reporting_info));
+}
+
 static void create_metering_ep(esp_zb_ep_list_t *epList) {
     esp_zb_cluster_list_t *clusterList = esp_zb_zcl_cluster_list_create();
 
@@ -146,12 +173,58 @@ static void create_metering_ep(esp_zb_ep_list_t *epList) {
     ESP_ERROR_CHECK(esp_zb_ep_list_add_ep(epList, clusterList, onOffEpConfig));
 }
 
+static void configure_metering_reporting() {
+    esp_zb_zcl_reporting_info_t reporting_info = {
+        .direction = ESP_ZB_ZCL_CMD_DIRECTION_TO_SRV,
+        .ep = METERING_ENDPOINT_ID,
+        .cluster_id = ESP_ZB_ZCL_CLUSTER_ID_METERING,
+        .cluster_role = ESP_ZB_ZCL_CLUSTER_SERVER_ROLE,
+        .dst.profile_id = ESP_ZB_AF_HA_PROFILE_ID,
+        .u.send_info.min_interval = 5,
+        .u.send_info.max_interval = 120,
+        .u.send_info.def_min_interval = 5,
+        .u.send_info.def_max_interval = 120,
+        .manuf_code = ESP_ZB_ZCL_ATTR_NON_MANUFACTURER_SPECIFIC,
+    };
+
+    reporting_info.attr_id = ESP_ZB_ZCL_ATTR_METERING_INSTANTANEOUS_DEMAND_ID;
+    reporting_info.u.send_info.delta = (union esp_zb_zcl_attr_var_u){.s24.low = 1};
+    ESP_ERROR_CHECK(esp_zb_zcl_update_reporting_info(&reporting_info));
+
+    reporting_info.attr_id = ESP_ZB_ZCL_ATTR_METERING_CURRENT_SUMMATION_DELIVERED_ID;
+    reporting_info.u.send_info.delta = (union esp_zb_zcl_attr_var_u){.u48.low = 1};
+    ESP_ERROR_CHECK(esp_zb_zcl_update_reporting_info(&reporting_info));
+
+    reporting_info.attr_id = ESP_ZB_ZCL_ATTR_METERING_CURRENT_SUMMATION_RECEIVED_ID;
+    ESP_ERROR_CHECK(esp_zb_zcl_update_reporting_info(&reporting_info));
+
+    reporting_info.attr_id = ESP_ZB_ZCL_ATTR_METERING_CURRENT_TIER1_SUMMATION_DELIVERED_ID;
+    ESP_ERROR_CHECK(esp_zb_zcl_update_reporting_info(&reporting_info));
+
+    reporting_info.attr_id = ESP_ZB_ZCL_ATTR_METERING_CURRENT_TIER1_SUMMATION_RECEIVED_ID;
+    ESP_ERROR_CHECK(esp_zb_zcl_update_reporting_info(&reporting_info));
+
+    reporting_info.attr_id = ESP_ZB_ZCL_ATTR_METERING_CURRENT_TIER2_SUMMATION_DELIVERED_ID;
+    ESP_ERROR_CHECK(esp_zb_zcl_update_reporting_info(&reporting_info));
+
+    reporting_info.attr_id = ESP_ZB_ZCL_ATTR_METERING_CURRENT_TIER2_SUMMATION_RECEIVED_ID;
+    ESP_ERROR_CHECK(esp_zb_zcl_update_reporting_info(&reporting_info));
+}
+
 void zigbee_meter_create_ep(esp_zb_ep_list_t *epList) {
     create_metering_ep(epList);
 
     // Home assistant doesn't support phb and phc attributes => one end point per phase
     for (int16_t phase = 0; phase < 3; ++phase) {
         create_electrical_measurement_ep(epList, phase);
+    }
+}
+
+void zigbee_meter_configure_reporting() {
+    configure_metering_reporting();
+
+    for (int16_t phase = 0; phase < 3; ++phase) {
+        configure_electrical_measurement_reporting(phase);
     }
 }
 
@@ -168,169 +241,82 @@ void zigbee_meter_update_active_power(int16_t powerWatts) {
     prev = powerWatts;
     ESP_LOGI(TAG, "Update the active power: %dW", powerWatts);
     esp_zb_lock_acquire(portMAX_DELAY);
-    esp_zb_zcl_report_attr_cmd_t cmdReq = {.zcl_basic_cmd.src_endpoint = ELECTRICAL_MEASUREMENT_ENDPOINT_FIRST_ID,
-                                           .clusterID = ESP_ZB_ZCL_CLUSTER_ID_ELECTRICAL_MEASUREMENT,
-                                           .cluster_role = ESP_ZB_ZCL_CLUSTER_SERVER_ROLE,
-                                           .attributeID = ESP_ZB_ZCL_ATTR_ELECTRICAL_MEASUREMENT_ACTIVE_POWER_ID};
 
-    esp_zb_zcl_status_t state =
-        esp_zb_zcl_set_attribute_val(cmdReq.zcl_basic_cmd.src_endpoint, cmdReq.clusterID, cmdReq.cluster_role,
-                                     cmdReq.attributeID, &powerWatts, false);
+    esp_zb_zcl_status_t state = esp_zb_zcl_set_attribute_val(
+        ELECTRICAL_MEASUREMENT_ENDPOINT_FIRST_ID, ESP_ZB_ZCL_CLUSTER_ID_ELECTRICAL_MEASUREMENT,
+        ESP_ZB_ZCL_CLUSTER_SERVER_ROLE, ESP_ZB_ZCL_ATTR_ELECTRICAL_MEASUREMENT_ACTIVE_POWER_ID, &powerWatts, false);
 
     if (state != ESP_ZB_ZCL_STATUS_SUCCESS) {
         esp_zb_lock_release();
         ESP_LOGE(TAG, "Setting active power attribute failed: %d", state);
         return;
     }
-
-    esp_zb_zcl_report_attr_cmd_t cmdReq2 = {.zcl_basic_cmd.src_endpoint = METERING_ENDPOINT_ID,
-                                            .clusterID = ESP_ZB_ZCL_CLUSTER_ID_METERING,
-                                            .cluster_role = ESP_ZB_ZCL_CLUSTER_SERVER_ROLE,
-                                            .attributeID = ESP_ZB_ZCL_ATTR_METERING_INSTANTANEOUS_DEMAND_ID};
 
     int32_t power32 = powerWatts;
-    state = esp_zb_zcl_set_attribute_val(cmdReq2.zcl_basic_cmd.src_endpoint, cmdReq2.clusterID, cmdReq2.cluster_role,
-                                         cmdReq2.attributeID, &power32, false);
+    state = esp_zb_zcl_set_attribute_val(METERING_ENDPOINT_ID, ESP_ZB_ZCL_CLUSTER_ID_METERING,
+                                         ESP_ZB_ZCL_CLUSTER_SERVER_ROLE,
+                                         ESP_ZB_ZCL_ATTR_METERING_INSTANTANEOUS_DEMAND_ID, &power32, false);
+    esp_zb_lock_release();
 
     if (state != ESP_ZB_ZCL_STATUS_SUCCESS) {
-        esp_zb_lock_release();
         ESP_LOGE(TAG, "Setting active power attribute failed: %d", state);
         return;
     }
-
-    state = esp_zb_zcl_report_attr_cmd_req(&cmdReq);
-
-    /* Check for error */
-    if (state != ESP_ZB_ZCL_STATUS_SUCCESS) {
-        esp_zb_lock_release();
-        ESP_LOGE(TAG, "Sending active power attribute report command failed: %d", state);
-        return;
-    }
-
-    state = esp_zb_zcl_report_attr_cmd_req(&cmdReq2);
-    esp_zb_lock_release();
-
-    /* Check for error */
-    if (state != ESP_ZB_ZCL_STATUS_SUCCESS) {
-        ESP_LOGE(TAG, "Sending active power attribute report command failed: %d", state);
-        return;
-    }
-    ESP_LOGI(TAG, "Done updating the active power");
 }
 
 static void updateElectricalMeasurementUint16Attr(uint8_t endpoint, uint16_t attrId, uint16_t value) {
     esp_zb_lock_acquire(portMAX_DELAY);
-    esp_zb_zcl_report_attr_cmd_t cmdReq = {.zcl_basic_cmd.src_endpoint = endpoint,
-                                           .clusterID = ESP_ZB_ZCL_CLUSTER_ID_ELECTRICAL_MEASUREMENT,
-                                           .cluster_role = ESP_ZB_ZCL_CLUSTER_SERVER_ROLE,
-                                           .attributeID = attrId};
+    esp_zb_zcl_status_t state = esp_zb_zcl_set_attribute_val(endpoint, ESP_ZB_ZCL_CLUSTER_ID_ELECTRICAL_MEASUREMENT,
+                                                             ESP_ZB_ZCL_CLUSTER_SERVER_ROLE, attrId, &value, false);
 
-    esp_zb_zcl_status_t state = esp_zb_zcl_set_attribute_val(cmdReq.zcl_basic_cmd.src_endpoint, cmdReq.clusterID,
-                                                             cmdReq.cluster_role, cmdReq.attributeID, &value, false);
-
-    if (state != ESP_ZB_ZCL_STATUS_SUCCESS) {
-        esp_zb_lock_release();
-        ESP_LOGE(TAG, "Setting %04x electrical measurement attribute failed: %d", attrId, state);
-        return;
-    }
-
-    state = esp_zb_zcl_report_attr_cmd_req(&cmdReq);
     esp_zb_lock_release();
-
-    /* Check for error */
     if (state != ESP_ZB_ZCL_STATUS_SUCCESS) {
-        ESP_LOGE(TAG, "Sending %04x electrical measurement attribute report command failed: %d", attrId, state);
-        return;
+        ESP_LOGE(TAG, "Setting %04x electrical measurement attribute failed: %d", attrId, state);
     }
 }
 
 void zigbee_meter_update_rms_current(int phase, uint16_t currentAmps) {
-    static uint16_t prev[3] = {};
-    if (prev[phase] == currentAmps) {
-        return;
-    }
-    prev[phase] = currentAmps;
     ESP_LOGI(TAG, "Update the RMS current on phase %d: %dA", phase + 1, currentAmps);
     updateElectricalMeasurementUint16Attr(ELECTRICAL_MEASUREMENT_ENDPOINT_FIRST_ID + phase,
                                           ESP_ZB_ZCL_ATTR_ELECTRICAL_MEASUREMENT_RMSCURRENT_ID, currentAmps);
-    ESP_LOGI(TAG, "Done updating the RMS current on phase %d", phase + 1);
 }
 
 void zigbee_meter_update_rms_voltage(int phase, uint16_t voltageVolts) {
-    static uint16_t prev[3] = {};
-    if (prev[phase] == voltageVolts) {
-        return;
-    }
-    prev[phase] = voltageVolts;
     ESP_LOGI(TAG, "Update the RMS voltage on phase %d: %dV", phase + 1, voltageVolts);
     updateElectricalMeasurementUint16Attr(ELECTRICAL_MEASUREMENT_ENDPOINT_FIRST_ID + phase,
                                           ESP_ZB_ZCL_ATTR_ELECTRICAL_MEASUREMENT_RMSVOLTAGE_ID, voltageVolts);
-    ESP_LOGI(TAG, "Done updating the RMS voltage on phase %d", phase + 1);
 }
 
 static void updateMeteringUint64Attr(uint8_t endpoint, uint16_t attrId, uint64_t value) {
     esp_zb_lock_acquire(portMAX_DELAY);
-    esp_zb_zcl_report_attr_cmd_t cmdReq = {.zcl_basic_cmd.src_endpoint = endpoint,
-                                           .clusterID = ESP_ZB_ZCL_CLUSTER_ID_METERING,
-                                           .cluster_role = ESP_ZB_ZCL_CLUSTER_SERVER_ROLE,
-                                           .attributeID = attrId};
 
-    esp_zb_zcl_status_t state = esp_zb_zcl_set_attribute_val(cmdReq.zcl_basic_cmd.src_endpoint, cmdReq.clusterID,
-                                                             cmdReq.cluster_role, cmdReq.attributeID, &value, false);
-
-    if (state != ESP_ZB_ZCL_STATUS_SUCCESS) {
-        esp_zb_lock_release();
-        ESP_LOGE(TAG, "Setting %04x metering attribute failed: %d", attrId, state);
-        return;
-    }
-
-    state = esp_zb_zcl_report_attr_cmd_req(&cmdReq);
+    esp_zb_zcl_status_t state = esp_zb_zcl_set_attribute_val(endpoint, ESP_ZB_ZCL_CLUSTER_ID_METERING,
+                                                             ESP_ZB_ZCL_CLUSTER_SERVER_ROLE, attrId, &value, false);
     esp_zb_lock_release();
 
-    /* Check for error */
     if (state != ESP_ZB_ZCL_STATUS_SUCCESS) {
-        ESP_LOGE(TAG, "Sending %04x metering attribute report command failed: %d", attrId, state);
-        return;
+        ESP_LOGE(TAG, "Setting %04x metering attribute failed: %d", attrId, state);
     }
 }
 
 void zigbee_meter_update_summation_received(uint64_t energy) {
-    static uint64_t prev = {};
-    if (prev == energy) {
-        return;
-    }
-    prev = energy;
     ESP_LOGI(TAG, "Update the summation received: %lluW/h", energy);
     updateMeteringUint64Attr(METERING_ENDPOINT_ID, ESP_ZB_ZCL_ATTR_METERING_CURRENT_SUMMATION_RECEIVED_ID, energy);
-    ESP_LOGI(TAG, "Done updating the summation received");
 }
 
 void zigbee_meter_update_summation_delivered(uint64_t energy) {
-    static uint64_t prev = {};
-    if (prev == energy) {
-        return;
-    }
-    prev = energy;
     ESP_LOGI(TAG, "Update the summation delivered: %lluW/h", energy);
     updateMeteringUint64Attr(METERING_ENDPOINT_ID, ESP_ZB_ZCL_ATTR_METERING_CURRENT_SUMMATION_DELIVERED_ID, energy);
-    ESP_LOGI(TAG, "Done updating the summation delivered");
 }
 
 void zigbee_meter_update_tier_summation_received(int tier, uint64_t energy) {
-    static uint64_t prev[2] = {};
-    if (prev[tier] == energy) {
-        return;
-    }
-    prev[tier] = energy;
     ESP_LOGI(TAG, "Update the summation received tier %d: %lluW/h", tier + 1, energy);
     updateMeteringUint64Attr(METERING_ENDPOINT_ID,
                              ESP_ZB_ZCL_ATTR_METERING_CURRENT_TIER1_SUMMATION_RECEIVED_ID + 2 * tier, energy);
-    ESP_LOGI(TAG, "Done updating the summation received");
 }
 
 void zigbee_meter_update_tier_summation_delivered(int tier, uint64_t energy) {
     ESP_LOGI(TAG, "Update the summation delivered tier %d: %lluW/h", tier + 1, energy);
     updateMeteringUint64Attr(METERING_ENDPOINT_ID,
                              ESP_ZB_ZCL_ATTR_METERING_CURRENT_TIER1_SUMMATION_DELIVERED_ID + 2 * tier, energy);
-    ESP_LOGI(TAG, "Done updating the summation delivered");
 }

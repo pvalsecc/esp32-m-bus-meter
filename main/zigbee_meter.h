@@ -11,6 +11,7 @@ extern "C" {
 #define ELECTRICAL_MEASUREMENT_ENDPOINT_FIRST_ID 11
 
 void zigbee_meter_create_ep(esp_zb_ep_list_t *epList);
+void zigbee_meter_configure_reporting();
 esp_err_t zigbee_meter_attribute_handler(const esp_zb_zcl_set_attr_value_message_t *message);
 
 #ifdef __cplusplus

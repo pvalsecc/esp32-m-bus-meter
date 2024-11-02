@@ -130,6 +130,11 @@ static esp_zb_ep_list_t *zigbee_create_ep_list() {
     return epList;
 }
 
+static void zigbee_configure_reporting() {
+    zigbee_meter_configure_reporting();
+    zigbee_temperature_configure_reporting();
+}
+
 static void zigbee_task(void *pvParameters) {
     (void)pvParameters;
 
@@ -147,6 +152,8 @@ static void zigbee_task(void *pvParameters) {
 
     esp_zb_ep_list_t *epList = zigbee_create_ep_list();
     esp_zb_device_register(epList);
+
+    zigbee_configure_reporting();
 
     esp_zb_core_action_handler_register(zigbee_action_handler);
     esp_zb_set_primary_network_channel_set(ESP_ZB_TRANSCEIVER_ALL_CHANNELS_MASK);

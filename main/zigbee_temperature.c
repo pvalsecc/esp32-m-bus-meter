@@ -12,34 +12,19 @@ static const char *TAG = "zigbee_temperature";
 static temperature_sensor_handle_t temp_sensor = NULL;
 
 static void zigbee_temperature_update() {
-    esp_zb_lock_acquire(portMAX_DELAY);
-    esp_zb_zcl_report_attr_cmd_t cmdReq = {.zcl_basic_cmd.src_endpoint = TEMPERATURE_ENDPOINT_ID,
-                                           .address_mode = ESP_ZB_APS_ADDR_MODE_DST_ADDR_ENDP_NOT_PRESENT,
-                                           .clusterID = ESP_ZB_ZCL_CLUSTER_ID_TEMP_MEASUREMENT,
-                                           .cluster_role = ESP_ZB_ZCL_CLUSTER_SERVER_ROLE,
-                                           .attributeID = ESP_ZB_ZCL_ATTR_TEMP_MEASUREMENT_VALUE_ID};
-
     float temperature;
     ESP_ERROR_CHECK(temperature_sensor_get_celsius(temp_sensor, &temperature));
     ESP_LOGI(TAG, "Got temperature: %.02f°C", temperature);
     int16_t temperatureInt = temperature * 100.0f;
 
-    esp_zb_zcl_status_t state =
-        esp_zb_zcl_set_attribute_val(cmdReq.zcl_basic_cmd.src_endpoint, cmdReq.clusterID, cmdReq.cluster_role,
-                                     cmdReq.attributeID, &temperatureInt, false);
-
-    if (state != ESP_ZB_ZCL_STATUS_SUCCESS) {
-        esp_zb_lock_release();
-        ESP_LOGE(TAG, "Setting temperature attribute failed: 0x%03x", state);
-        return;
-    }
-
-    state = esp_zb_zcl_report_attr_cmd_req(&cmdReq);
+    esp_zb_lock_acquire(portMAX_DELAY);
+    esp_zb_zcl_status_t state = esp_zb_zcl_set_attribute_val(
+        TEMPERATURE_ENDPOINT_ID, ESP_ZB_ZCL_CLUSTER_ID_TEMP_MEASUREMENT, ESP_ZB_ZCL_CLUSTER_SERVER_ROLE,
+        ESP_ZB_ZCL_ATTR_TEMP_MEASUREMENT_VALUE_ID, &temperatureInt, false);
     esp_zb_lock_release();
 
-    /* Check for error */
     if (state != ESP_ZB_ZCL_STATUS_SUCCESS) {
-        ESP_LOGE(TAG, "Sending temperature attribute report command failed: 0x%03x", state);
+        ESP_LOGE(TAG, "Setting temperature attribute failed: 0x%03x", state);
         return;
     }
 }
@@ -81,4 +66,20 @@ void zigbee_temperature_create_ep(esp_zb_ep_list_t *epList) {
     esp_timer_handle_t periodic_timer;
     ESP_ERROR_CHECK(esp_timer_create(&periodic_timer_args, &periodic_timer));
     ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer, 60 * 1000 * 1000));
+}
+
+void zigbee_temperature_configure_reporting() {
+    esp_zb_zcl_reporting_info_t reporting_info = {.direction = ESP_ZB_ZCL_CMD_DIRECTION_TO_SRV,
+                                                  .ep = TEMPERATURE_ENDPOINT_ID,
+                                                  .cluster_id = ESP_ZB_ZCL_CLUSTER_ID_TEMP_MEASUREMENT,
+                                                  .cluster_role = ESP_ZB_ZCL_CLUSTER_SERVER_ROLE,
+                                                  .dst.profile_id = ESP_ZB_AF_HA_PROFILE_ID,
+                                                  .u.send_info.min_interval = 30,
+                                                  .u.send_info.max_interval = 30 * 60,
+                                                  .u.send_info.def_min_interval = 30,
+                                                  .u.send_info.def_max_interval = 30 * 60,
+                                                  .u.send_info.delta = (union esp_zb_zcl_attr_var_u){.s16 = 10},
+                                                  .manuf_code = ESP_ZB_ZCL_ATTR_NON_MANUFACTURER_SPECIFIC,
+                                                  .attr_id = ESP_ZB_ZCL_ATTR_ELECTRICAL_MEASUREMENT_ACTIVE_POWER_ID};
+    ESP_ERROR_CHECK(esp_zb_zcl_update_reporting_info(&reporting_info));
 }
