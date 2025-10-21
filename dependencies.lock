@@ -1,6 +1,6 @@
 dependencies:
   espressif/button:
-    component_hash: 19d729c86c9d0e3819e95ef27b7e561598301e9716ef6df3b5bc7337e5816c6e
+    component_hash: 4ed25fcf354b48aa5e5680b9e7549e38d7738f9b613c94a2e39119c100db9c95
     dependencies:
     - name: espressif/cmake_utilities
       registry_url: https://components.espressif.com
@@ -12,7 +12,7 @@ dependencies:
     source:
       registry_url: https://components.espressif.com/
       type: service
-    version: 4.1.0
+    version: 4.1.4
   espressif/cmake_utilities:
     component_hash: 05165f30922b422b4b90c08845e6d449329b97370fbd06309803d8cb539d79e3
     dependencies:
@@ -44,7 +44,7 @@ dependencies:
       type: service
     version: 1.6.4
   espressif/led_indicator:
-    component_hash: 91480317e4ced44af3b98b4c97ff6f4164bdb9c28616cf74ec2b0137ba2ff830
+    component_hash: d6bc9ee6770ed802b7a44a793bde0c7de4904d5d3c5ec1f363e2b4e1cda79bac
     dependencies:
     - name: espressif/cmake_utilities
       registry_url: https://components.espressif.com
@@ -52,35 +52,35 @@ dependencies:
       version: '*'
     - name: idf
       require: private
-      version: '>=4.0'
+      version: '>=5.0'
     - name: espressif/led_strip
       registry_url: https://components.espressif.com
       require: public
-      version: 2.5.5
+      version: 3.*
     source:
       registry_url: https://components.espressif.com/
       type: service
-    version: 1.1.0
+    version: 2.0.2
   espressif/led_strip:
-    component_hash: 28c6509a727ef74925b372ed404772aeedf11cce10b78c3f69b3c66799095e2d
+    component_hash: 223998f10cae6d81f2ad2dd3c1103c2221be298c708e37917482b0153f3ec64e
     dependencies:
     - name: idf
       require: private
-      version: '>=4.4'
+      version: '>=5.0'
     source:
       registry_url: https://components.espressif.com
       type: service
-    version: 2.5.5
+    version: 3.0.1~1
   idf:
     source:
       type: idf
-    version: 5.4.0
+    version: 5.5.1
 direct_dependencies:
 - espressif/button
 - espressif/esp-zboss-lib
 - espressif/esp-zigbee-lib
 - espressif/led_indicator
 - idf
-manifest_hash: 78e96413c0350ab89406b4c4f66abd3f50dc26585fc272daaffb3e012f569474
+manifest_hash: f2f2f8a6b873970982c457d7db65c427f483d5b9477b0b28899cd3e855f68f38
 target: esp32h2
 version: 2.0.0
