@@ -3,7 +3,7 @@ dependencies:
   espressif/led_indicator: "*"
   espressif/button: "*"
   espressif/esp-zboss-lib: "*"
-  espressif/esp-zigbee-lib: "1.6.4"
+  espressif/esp-zigbee-lib: "*"
   ## Required IDF version
   idf:
     version: ">=5.0.0"

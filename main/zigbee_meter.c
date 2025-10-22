@@ -1,11 +1,7 @@
 #include "zigbee_meter.h"
 #include "zigbee_meter_values.h"
 #include "zigbee_utils.h"
-#include <esp_zigbee_attribute.h>
-#include <esp_zigbee_cluster.h>
 #include <esp_zigbee_core.h>
-#include <esp_zigbee_endpoint.h>
-#include <zcl/esp_zigbee_zcl_command.h>
 
 static const char *TAG = "zigbee_meter";
 

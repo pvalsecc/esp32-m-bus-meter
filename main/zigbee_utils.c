@@ -4,7 +4,6 @@
 
 #include "zigbee_utils.h"
 #include "led.h"
-#include <esp_check.h>
 #include <esp_zigbee_core.h>
 #include <string.h>
 

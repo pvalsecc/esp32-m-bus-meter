@@ -1,7 +1,6 @@
 #include "led.h"
 #include <esp_log.h>
 #include <led_indicator.h>
-#include <led_indicator_gpio.h>
 #include <led_indicator_strips.h>
 
 static const char *TAG = "led";

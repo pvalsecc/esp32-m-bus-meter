@@ -3,14 +3,13 @@
 #include "zigbee.h"
 #include "zigbee_meter_values.h"
 
-#include <stdbool.h>
-
 #include <button_gpio.h>
 #include <esp_log.h>
 #include <hal/efuse_hal.h>
 #include <iot_button.h>
 #include <nvs_flash.h>
 #include <soc/gpio_num.h>
+#include <stdbool.h>
 #include <stdio.h>
 
 static const char *TAG = "main";

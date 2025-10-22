@@ -34,7 +34,7 @@ dependencies:
       type: service
     version: 1.6.4
   espressif/esp-zigbee-lib:
-    component_hash: 4b023e171bd89d9f6ee2bd9fa63e569c9cfc7f6885d849b566b88cbfcbd37176
+    component_hash: 4b73d7dc7d018114f24712a5af1bb7a53dca95f979fe646461f066f344dd9120
     dependencies:
     - name: idf
       require: private
@@ -42,7 +42,7 @@ dependencies:
     source:
       registry_url: https://components.espressif.com/
       type: service
-    version: 1.6.4
+    version: 1.6.7
   espressif/led_indicator:
     component_hash: d6bc9ee6770ed802b7a44a793bde0c7de4904d5d3c5ec1f363e2b4e1cda79bac
     dependencies:
@@ -81,6 +81,6 @@ direct_dependencies:
 - espressif/esp-zigbee-lib
 - espressif/led_indicator
 - idf
-manifest_hash: f2f2f8a6b873970982c457d7db65c427f483d5b9477b0b28899cd3e855f68f38
+manifest_hash: 78e96413c0350ab89406b4c4f66abd3f50dc26585fc272daaffb3e012f569474
 target: esp32h2
 version: 2.0.0

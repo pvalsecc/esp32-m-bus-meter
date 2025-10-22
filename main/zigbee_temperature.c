@@ -1,11 +1,7 @@
 #include "zigbee_temperature.h"
-#include "esp_zigbee_core.h"
 #include <driver/temperature_sensor.h>
-#include <esp_log.h>
 #include <esp_timer.h>
-#include <esp_zigbee_cluster.h>
-#include <esp_zigbee_endpoint.h>
-#include <zcl/esp_zigbee_zcl_common.h>
+#include <esp_zigbee_core.h>
 
 static const char *TAG = "zigbee_temperature";
 

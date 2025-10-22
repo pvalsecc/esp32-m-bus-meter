@@ -6,7 +6,6 @@
 #include <esp_check.h>
 #include <esp_zigbee_core.h>
 #include <string.h>
-#include <zb_config_platform.h>
 
 static const char *TAG = "zigbee";
 

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <esp_zigbee_type.h>
-#include <zcl/esp_zigbee_zcl_command.h>
+#include <zcl/esp_zigbee_zcl_core.h>
 
 #define LIGHT_ENDPOINT_ID 20
 
